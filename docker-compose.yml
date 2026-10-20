@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: shiplens_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: shiplens_user
+      POSTGRES_PASSWORD: shiplens_secret
+      POSTGRES_DB: shiplens_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shiplens_user -d shiplens_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: shiplens_app
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://shiplens_user:shiplens_secret@postgres:5432/shiplens_db
+
+volumes:
+  pgdata:
