@@ -2,7 +2,7 @@
 
 ## Live Platform & Status
 - **Live URL:** [Insert Render Link]
-- **CI Status:** ![ShipLens CI Pipeline](https://github.com//<your-repo>/actions/workflows/ci.yml/badge.svg)
+- **CI Status:** ![ShipLens CI Pipeline](https://github.com//shiplens-platform/actions/workflows/ci.yml/badge.svg)
 
 ## Technology Stack
 - **Backend:** Node.js, Express, TypeScript
@@ -13,5 +13,5 @@
 ## Local Setup
 1. Clone the repository:
    ```bash
-   git clone [https://github.com/](https://github.com/)<your-username>/<your-repo>.git
-   cd <your-repo>
+   git clone [https://github.com/](https://github.com/)realHaris-gif/shiplens-platform
+   cd shiplens-platform
