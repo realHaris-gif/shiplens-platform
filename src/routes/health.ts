@@ -10,20 +10,21 @@ router.get('/health', async (_req: Request, res: Response) => {
       return res.status(200).json({
         status: 'ok',
         database: 'connected',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     }
     return res.status(503).json({
       status: 'error',
       database: 'unresponsive',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
-  } catch (error) {
+  } catch (error: any) {
     return res.status(503).json({
       status: 'error',
       database: 'disconnected',
-      error: (error as Error).message,
-      timestamp: new Date().toISOString()
+      error: error?.message || String(error),
+      code: error?.code,
+      timestamp: new Date().toISOString(),
     });
   }
 });
