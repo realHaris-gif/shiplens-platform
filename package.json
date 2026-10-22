@@ -4,13 +4,12 @@
   "description": "ShipLens branch-to-head-office management platform",
   "main": "dist/server.js",
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/server.js",
-    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "lint": "eslint . --ext .ts",
-    "test": "jest --runInBand --detectOpenHandles --forceExit",
-    "test:coverage": "jest --coverage --runInBand --detectOpenHandles --forceExit"
-  },
+  "build": "tsc && cp -r src/db/migrations dist/db/migrations",
+  "start": "node dist/server.js",
+  "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+  "test": "jest",
+  "test:coverage": "jest --coverage --runInBand --detectOpenHandles --forceExit"
+},
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
