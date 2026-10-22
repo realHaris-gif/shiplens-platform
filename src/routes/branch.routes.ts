@@ -5,13 +5,21 @@ import { Role } from '../types';
 
 const router = Router();
 
-router.use(authenticate);
+// Authenticated branch routes
+router.get('/branches', authenticate, BranchController.list);
 
-// Listing branches can be seen by authenticated users
-router.get('/branches', BranchController.list);
+router.post(
+  '/branches',
+  authenticate,
+  requireRoles([Role.SUPER_ADMIN]),
+  BranchController.create
+);
 
-// Only SUPER_ADMIN can create branches or mutate lifecycle status
-router.post('/branches', requireRoles([Role.SUPER_ADMIN]), BranchController.create);
-router.patch('/branches/:id/status', requireRoles([Role.SUPER_ADMIN]), BranchController.updateStatus);
+router.patch(
+  '/branches/:id/status',
+  authenticate,
+  requireRoles([Role.SUPER_ADMIN]),
+  BranchController.updateStatus
+);
 
 export default router;
