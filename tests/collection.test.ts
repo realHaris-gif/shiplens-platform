@@ -147,4 +147,30 @@ describe('Offline Collections & Paisa Financial Ledger (Day 6)', () => {
       .set('Authorization', financeToken);
     expect(relockRes.status).toBe(422);
   });
+  it('should allow FINANCE_REVIEWER to mark collection as transferred and list collections', async () => {
+    // Record
+    const createRes = await request(app)
+      .post('/collections')
+      .set('Authorization', branchLeadToken)
+      .send({
+        branchId: testBranchId,
+        amountPaisa: 75000,
+        collectionDate: '2026-10-22',
+      });
+    const colId = createRes.body.id;
+
+    // Transfer
+    const transRes = await request(app)
+      .patch(`/collections/${colId}/transfer`)
+      .set('Authorization', financeToken);
+    expect(transRes.status).toBe(200);
+    expect(transRes.body.is_sent_to_main_account).toBe(true);
+
+    // List
+    const listRes = await request(app)
+      .get('/collections')
+      .set('Authorization', branchLeadToken);
+    expect(listRes.status).toBe(200);
+    expect(Array.isArray(listRes.body)).toBe(true);
+  });
 });

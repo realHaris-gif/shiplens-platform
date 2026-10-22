@@ -1,0 +1,84 @@
+import { Response } from 'express';
+import { AuthenticatedRequest } from '../middleware/auth.middleware';
+import { ReportService } from '../services/report.service';
+import { Role } from '../types';
+
+export class ReportController {
+  static async createDraft(req: AuthenticatedRequest, res: Response) {
+    const { branchId, weekStartDate, weekEndDate, submissionNotes } = req.body;
+
+    if (!branchId || !weekStartDate || !weekEndDate) {
+      return res.status(400).json({ error: 'branchId, weekStartDate, and weekEndDate are required' });
+    }
+
+    if (req.user?.role === Role.BRANCH_LEAD && req.user.branchId !== branchId) {
+      return res.status(403).json({ error: 'Forbidden: Cannot create reports for another branch' });
+    }
+
+    try {
+      const draft = await ReportService.createDraft(
+        { branchId, weekStartDate, weekEndDate, submissionNotes },
+        req.user!.userId,
+        req.ip
+      );
+      return res.status(201).json(draft);
+    } catch (error: any) {
+      return res.status(422).json({ error: error.message });
+    }
+  }
+
+  static async submit(req: AuthenticatedRequest, res: Response) {
+    const { id } = req.params;
+    try {
+      const submitted = await ReportService.submitReport(id, req.user!.userId, req.ip);
+      return res.status(200).json(submitted);
+    } catch (error: any) {
+      return res.status(422).json({ error: error.message });
+    }
+  }
+
+  static async approve(req: AuthenticatedRequest, res: Response) {
+    const { id } = req.params;
+    try {
+      const approved = await ReportService.approveReport(id, req.user!.userId, req.ip);
+      return res.status(200).json(approved);
+    } catch (error: any) {
+      return res.status(422).json({ error: error.message });
+    }
+  }
+
+  static async returnReport(req: AuthenticatedRequest, res: Response) {
+    const { id } = req.params;
+    const { rejectionReason } = req.body;
+
+    try {
+      const returned = await ReportService.returnReport(
+        id,
+        rejectionReason,
+        req.user!.userId,
+        req.ip
+      );
+      return res.status(200).json(returned);
+    } catch (error: any) {
+      return res.status(422).json({ error: error.message });
+    }
+  }
+
+  static async list(req: AuthenticatedRequest, res: Response) {
+    let branchId = req.query.branchId as string | undefined;
+
+    if (req.user?.role === Role.BRANCH_LEAD) {
+      branchId = req.user.branchId || undefined;
+    }
+
+    try {
+      const reports = await ReportService.listReports({
+        branchId,
+        status: req.query.status as string | undefined,
+      });
+      return res.status(200).json(reports);
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message });
+    }
+  }
+}
