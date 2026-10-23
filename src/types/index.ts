@@ -19,6 +19,11 @@ export enum ApplicationStatus {
   DECLINED = 'DECLINED',
 }
 
+export enum MemberStatus {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+}
+
 export enum WeeklyReportStatus {
   DRAFT = 'DRAFT',
   SUBMITTED = 'SUBMITTED',

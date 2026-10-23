@@ -1,4 +1,4 @@
-import express, { Application } from 'express';
+import express, { Application, Request, Response, NextFunction } from 'express';
 import path from 'path';
 import cookieParser from 'cookie-parser';
 import healthRoutes from './routes/health';
@@ -13,18 +13,17 @@ const app: Application = express();
 app.use(express.json());
 app.use(cookieParser());
 
-// Define public folder path
 const publicPath = path.resolve(__dirname, 'public');
 
-// Serve static assets with index.html enabled
+// 1. Static assets (CSS, JS, images)
 app.use(express.static(publicPath, { index: 'index.html' }));
 
-// Explicit GET / handler
-app.get('/', (_req, res) => {
+// 2. Explicit Root Route
+app.get('/', (_req: Request, res: Response) => {
   res.sendFile(path.join(publicPath, 'index.html'));
 });
 
-// API routes
+// 3. API & Health Endpoints
 app.use(healthRoutes);
 app.use(authRoutes);
 app.use(branchRoutes);
@@ -32,12 +31,17 @@ app.use(memberRoutes);
 app.use(collectionRoutes);
 app.use(reportRoutes);
 
-// Catch-all SPA fallback for non-API GET routes
-app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api') || req.path.startsWith('/health')) {
-    return next();
+// 4. SPA Fallback: ONLY serve index.html for direct browser page navigations (HTML accepts)
+app.get('*', (req: Request, res: Response, next: NextFunction) => {
+  if (req.accepts('html')) {
+    return res.sendFile(path.join(publicPath, 'index.html'));
   }
-  return res.sendFile(path.join(publicPath, 'index.html'));
+  return next();
+});
+
+// 5. Unhandled API endpoint 404 fallback (strictly JSON)
+app.use((_req: Request, res: Response) => {
+  res.status(404).json({ error: 'Endpoint not found' });
 });
 
 export default app;

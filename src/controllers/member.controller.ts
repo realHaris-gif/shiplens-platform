@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
 import { MemberService } from '../services/member.service';
-import { ApplicationStatus } from '../types';
 
 export class MemberController {
   static async apply(req: Request, res: Response) {
@@ -11,22 +10,32 @@ export class MemberController {
     }
 
     try {
-      const app = await MemberService.submitApplication(
+      const application = await MemberService.apply(
         { fullName, email, phone, preferredBranchId, notes },
         req.ip
       );
-      return res.status(201).json(app);
+      return res.status(201).json(application);
+    } catch (error: any) {
+      return res.status(422).json({ error: error.message });
+    }
+  }
+
+  static async listApplications(req: AuthenticatedRequest, res: Response) {
+    try {
+      const status = req.query.status as string | undefined;
+      const applications = await MemberService.listApplications(status);
+      return res.status(200).json(applications);
     } catch (error: any) {
       return res.status(500).json({ error: error.message });
     }
   }
 
-  static async review(req: AuthenticatedRequest, res: Response) {
+  static async reviewApplication(req: AuthenticatedRequest, res: Response) {
     const { id } = req.params;
-    const { status, assignedBranchId } = req.body;
+    const { status, assignedBranchId, rejectionReason } = req.body;
 
-    if (![ApplicationStatus.ACCEPTED, ApplicationStatus.DECLINED].includes(status)) {
-      return res.status(400).json({ error: 'Status must be ACCEPTED or DECLINED' });
+    if (!status || !['ACCEPTED', 'DECLINED'].includes(status)) {
+      return res.status(400).json({ error: 'Valid status (ACCEPTED or DECLINED) is required' });
     }
 
     try {
@@ -35,6 +44,7 @@ export class MemberController {
         status,
         req.user!.userId,
         assignedBranchId,
+        rejectionReason,
         req.ip
       );
       return res.status(200).json(result);
@@ -44,22 +54,10 @@ export class MemberController {
   }
 
   static async listMembers(req: AuthenticatedRequest, res: Response) {
-    const { branchId, search } = req.query;
     try {
-      const members = await MemberService.listMembers({
-        branchId: branchId as string | undefined,
-        search: search as string | undefined,
-      });
+      const branchId = req.query.branchId as string | undefined;
+      const members = await MemberService.listMembers(branchId);
       return res.status(200).json(members);
-    } catch (error: any) {
-      return res.status(500).json({ error: error.message });
-    }
-  }
-  static async listApplications(req: AuthenticatedRequest, res: Response) {
-    try {
-      const status = req.query.status as string | undefined;
-      const apps = await MemberService.listApplications(status);
-      return res.status(200).json(apps);
     } catch (error: any) {
       return res.status(500).json({ error: error.message });
     }
