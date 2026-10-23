@@ -5,9 +5,10 @@ import { Role } from '../types';
 
 const router = Router();
 
-// Authenticated branch routes
-router.get('/branches', authenticate, BranchController.list);
+// Public: Anyone can list branches to apply
+router.get('/branches', BranchController.list);
 
+// Protected: Only SUPER_ADMIN can create or update status
 router.post(
   '/branches',
   authenticate,

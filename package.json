@@ -7,6 +7,7 @@
   "build": "tsc && cp -r src/db/migrations dist/db/migrations && cp -r src/public dist/public",
   "start": "node dist/server.js",
   "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+  "seed": "ts-node src/db/seed.ts",
   "test": "jest",
   "test:coverage": "jest --coverage --runInBand --detectOpenHandles --forceExit"
 },
