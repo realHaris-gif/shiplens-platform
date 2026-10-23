@@ -4,7 +4,7 @@
   "description": "ShipLens branch-to-head-office management platform",
   "main": "dist/server.js",
   "scripts": {
-  "build": "tsc && cp -r src/db/migrations dist/db/migrations",
+  "build": "tsc && cp -r src/db/migrations dist/db/migrations && cp -r src/public dist/public",
   "start": "node dist/server.js",
   "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
   "test": "jest",

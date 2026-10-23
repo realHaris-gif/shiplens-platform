@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShipLens — Operational & Governance Platform</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Header / Nav -->
+  <header class="navbar">
+    <div class="nav-brand">
+      <span class="logo-icon">⚓</span>
+      <span class="logo-text">ShipLens</span>
+      <span class="badge" id="env-badge">Production</span>
+    </div>
+    <div class="nav-actions">
+      <button id="lang-toggle" class="btn btn-secondary" onclick="toggleLanguage()">
+        <span id="lang-label">اردو</span>
+      </button>
+      <div id="auth-buttons">
+        <button class="btn btn-primary" onclick="showView('login-view')" data-i18n="nav_login">Portal Login</button>
+      </div>
+      <div id="user-profile" class="hidden">
+        <span id="user-role-badge" class="role-badge"></span>
+        <span id="user-email-display"></span>
+        <button class="btn btn-outline" onclick="logout()" data-i18n="nav_logout">Sign Out</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- View 1: Public Volunteer Portal -->
+    <section id="public-view" class="view">
+      <div class="hero">
+        <h1 data-i18n="hero_title">Decentralized Governance & Operational Integrity</h1>
+        <p data-i18n="hero_desc">ShipLens connects regional branches across Pakistan with centralized financial auditing, immutable logging, and volunteer management.</p>
+      </div>
+
+      <div class="card form-card">
+        <h2 data-i18n="form_title">Volunteer Application</h2>
+        <p class="subtitle" data-i18n="form_subtitle">Join our nationwide branch network in making an operational impact.</p>
+
+        <div id="app-alert" class="alert hidden"></div>
+
+        <form id="volunteer-form" onsubmit="handleVolunteerSubmit(event)">
+          <div class="form-group">
+            <label for="fullName" data-i18n="label_name">Full Name</label>
+            <input type="text" id="fullName" required placeholder="e.g. Muhammad Haris">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="email" data-i18n="label_email">Email Address</label>
+              <input type="email" id="email" required placeholder="name@example.com">
+            </div>
+            <div class="form-group">
+              <label for="phone" data-i18n="label_phone">Phone Number</label>
+              <input type="tel" id="phone" required placeholder="+92 300 1234567">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="preferredBranch" data-i18n="label_branch">Preferred Branch</label>
+            <select id="preferredBranch" required>
+              <option value="" disabled selected data-i18n="opt_select_branch">Select your local branch</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="notes" data-i18n="label_notes">Statement of Intent / Skills</label>
+            <textarea id="notes" rows="3" placeholder="Tell us about your background..."></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block" data-i18n="btn_submit_app">Submit Volunteer Application</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- View 2: Authentication Modal/View -->
+    <section id="login-view" class="view hidden">
+      <div class="card form-card login-card">
+        <h2 data-i18n="login_title">Staff & Officer Authentication</h2>
+        <p class="subtitle" data-i18n="login_subtitle">Enter credentials to access role-authorized operational pipelines.</p>
+
+        <div id="login-alert" class="alert hidden"></div>
+
+        <form id="login-form" onsubmit="handleLogin(event)">
+          <div class="form-group">
+            <label for="login-email" data-i18n="label_email">Corporate Email</label>
+            <input type="email" id="login-email" required placeholder="officer@shiplens.org">
+          </div>
+
+          <div class="form-group">
+            <label for="login-password" data-i18n="label_password">Password</label>
+            <input type="password" id="login-password" required placeholder="••••••••">
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block" data-i18n="btn_login">Authenticate</button>
+          <button type="button" class="btn btn-link btn-block" onclick="showView('public-view')" data-i18n="btn_back_home">← Back to Public Portal</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- View 3: Branch Lead Dashboard -->
+    <section id="branch-lead-view" class="view hidden">
+      <div class="view-header">
+        <div>
+          <h2>Branch Operations Console</h2>
+          <p class="subtitle">Offline Cash Ledger & Weekly Submission Engine</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <!-- Record Collection -->
+        <div class="card">
+          <h3>Record Offline Cash Collection</h3>
+          <p class="subtitle">Paisa-precision integer accounting (1 PKR = 100 Paisa)</p>
+
+          <form onsubmit="handleRecordCollection(event)">
+            <div class="form-group">
+              <label for="col-amount-pkr">Amount (PKR)</label>
+              <input type="number" id="col-amount-pkr" step="1" min="1" required placeholder="5000">
+            </div>
+            <div class="form-group">
+              <label for="col-date">Date Collected</label>
+              <input type="date" id="col-date" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Commit Collection to Ledger</button>
+          </form>
+        </div>
+
+        <!-- Draft Weekly Report -->
+        <div class="card">
+          <h3>Draft Weekly Branch Report</h3>
+          <p class="subtitle">Aggregates collections and freezes operational metrics</p>
+
+          <form onsubmit="handleCreateReport(event)">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="rep-start">Week Start (Monday)</label>
+                <input type="date" id="rep-start" required>
+              </div>
+              <div class="form-group">
+                <label for="rep-end">Week End (Sunday)</label>
+                <input type="date" id="rep-end" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="rep-notes">Submission Notes</label>
+              <textarea id="rep-notes" rows="2" placeholder="Weekly operational remarks..."></textarea>
+            </div>
+            <button type="submit" class="btn btn-secondary">Compile Draft Report</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Branch Active Reports Table -->
+      <div class="card mt-4">
+        <h3>My Branch Reports</h3>
+        <div class="table-responsive">
+          <table class="data-table" id="branch-reports-table">
+            <thead>
+              <tr>
+                <th>Period</th>
+                <th>Total Collections</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="4" class="text-center">Loading reports...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- View 4: HR Lead Dashboard -->
+    <section id="hr-lead-view" class="view hidden">
+      <div class="view-header">
+        <div>
+          <h2>Human Resources & Member Intake Pipeline</h2>
+          <p class="subtitle">Review volunteer applications and mint atomic member records</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Active Member Roster</h3>
+        <div class="table-responsive">
+          <table class="data-table" id="hr-roster-table">
+            <thead>
+              <tr>
+                <th>Member Code</th>
+                <th>Full Name</th>
+                <th>Branch</th>
+                <th>Contact</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="5" class="text-center">Loading roster...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- View 5: Finance & Super Admin Console -->
+    <section id="finance-view" class="view hidden">
+      <div class="view-header">
+        <div>
+          <h2>Central Financial Auditing & Frozen Snapshots</h2>
+          <p class="subtitle">Lock collections, approve weekly reports, and verify immutable audit trail</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Pending Reports for Executive Review</h3>
+        <div class="table-responsive">
+          <table class="data-table" id="finance-reports-table">
+            <thead>
+              <tr>
+                <th>Report ID</th>
+                <th>Week Period</th>
+                <th>Amount (PKR)</th>
+                <th>Status</th>
+                <th>Review Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="5" class="text-center">Loading submitted reports...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>© 2026 ShipLens Enterprise Platform — Server-side RBAC & Financial Auditing</p>
+  </footer>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
