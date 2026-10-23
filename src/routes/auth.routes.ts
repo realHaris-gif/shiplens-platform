@@ -1,10 +1,18 @@
 import { Router } from 'express';
+import { AuthController } from '../controllers/auth.controller';
 import { authenticate, requireRoles } from '../middleware/auth.middleware';
 import { Role } from '../types';
 
 const router = Router();
 
-// Target test routes for RBAC verification
+// --- Authentication Endpoints ---
+router.post('/auth/login', AuthController.login);
+router.post('/login', AuthController.login);
+
+router.post('/auth/logout', AuthController.logout);
+router.post('/logout', AuthController.logout);
+
+// --- RBAC Gate Verification Routes ---
 router.get(
   '/admin/system-settings',
   authenticate,
