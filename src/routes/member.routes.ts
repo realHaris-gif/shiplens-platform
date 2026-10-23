@@ -22,5 +22,11 @@ router.get(
   requireRoles([Role.SUPER_ADMIN, Role.HR_LEAD, Role.BRANCH_LEAD]),
   MemberController.listMembers
 );
+router.get(
+  '/applications',
+  authenticate,
+  requireRoles([Role.SUPER_ADMIN, Role.HR_LEAD]),
+  MemberController.listApplications
+);
 
 export default router;

@@ -55,4 +55,13 @@ export class MemberController {
       return res.status(500).json({ error: error.message });
     }
   }
+  static async listApplications(req: AuthenticatedRequest, res: Response) {
+    try {
+      const status = req.query.status as string | undefined;
+      const apps = await MemberService.listApplications(status);
+      return res.status(200).json(apps);
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message });
+    }
+  }
 }

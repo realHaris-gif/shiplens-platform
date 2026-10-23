@@ -3,7 +3,6 @@ let currentLang = 'en';
 let currentUser = null;
 let branches = [];
 
-// Bilingual dictionary
 const i18n = {
   en: {
     hero_title: 'Decentralized Governance & Operational Integrity',
@@ -55,7 +54,6 @@ function toggleLanguage() {
   document.documentElement.setAttribute('dir', currentLang === 'ur' ? 'rtl' : 'ltr');
   document.getElementById('lang-label').innerText = i18n[currentLang].lang_toggle_text;
 
-  // Apply translations
   document.querySelectorAll('[data-i18n]').forEach((el) => {
     const key = el.getAttribute('data-i18n');
     if (i18n[currentLang][key]) {
@@ -90,7 +88,7 @@ async function fetchBranches() {
   }
 }
 
-// Handle volunteer application
+// Public volunteer application submission
 async function handleVolunteerSubmit(event) {
   event.preventDefault();
   const alertEl = document.getElementById('app-alert');
@@ -165,7 +163,6 @@ function renderAuthenticatedState() {
   document.getElementById('user-role-badge').innerText = currentUser.role;
   document.getElementById('user-email-display').innerText = currentUser.email;
 
-  // Route to role-specific dashboard
   switch (currentUser.role) {
     case 'BRANCH_LEAD':
       showView('branch-lead-view');
@@ -193,7 +190,102 @@ function logout() {
   showView('public-view');
 }
 
-// Branch lead actions
+// -------------------------------------------------------------
+// HR Actions: Load Applications, Review & Accept
+// -------------------------------------------------------------
+async function loadHRRoster() {
+  const token = localStorage.getItem('shiplens_token');
+
+  // 1. Load pending applications
+  const appsTbody = document.querySelector('#hr-applications-table tbody');
+  try {
+    const appsRes = await fetch('/applications?status=APPLIED', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (appsRes.ok) {
+      const applications = await appsRes.json();
+      if (applications.length === 0) {
+        appsTbody.innerHTML = '<tr><td colspan="5" class="text-center">No pending applications in queue.</td></tr>';
+      } else {
+        appsTbody.innerHTML = applications.map((a) => `
+          <tr>
+            <td><strong>${a.full_name}</strong></td>
+            <td>${a.email}</td>
+            <td>${a.phone}</td>
+            <td>${a.preferred_branch_name || 'Unassigned'}</td>
+            <td>
+              <button class="btn btn-primary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="reviewApplication('${a.id}', 'ACCEPTED', '${a.preferred_branch_id}')">Accept & Mint</button>
+              <button class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="reviewApplication('${a.id}', 'DECLINED')">Decline</button>
+            </td>
+          </tr>
+        `).join('');
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load applications:', err);
+  }
+
+  // 2. Load active members
+  const rosterTbody = document.querySelector('#hr-roster-table tbody');
+  try {
+    const membersRes = await fetch('/members', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (membersRes.ok) {
+      const members = await membersRes.json();
+      if (members.length === 0) {
+        rosterTbody.innerHTML = '<tr><td colspan="5" class="text-center">No active members in roster.</td></tr>';
+      } else {
+        rosterTbody.innerHTML = members.map((m) => `
+          <tr>
+            <td><strong>${m.member_code}</strong></td>
+            <td>${m.full_name}</td>
+            <td>${m.branch_name || 'Assigned Branch'}</td>
+            <td>${m.email} (${m.phone})</td>
+            <td><span class="role-badge">${m.status}</span></td>
+          </tr>
+        `).join('');
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load members:', err);
+  }
+}
+
+async function reviewApplication(applicationId, status, preferredBranchId) {
+  const token = localStorage.getItem('shiplens_token');
+  try {
+    const res = await fetch(`/applications/${applicationId}/review`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        status,
+        assignedBranchId: preferredBranchId || undefined
+      })
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      if (status === 'ACCEPTED') {
+        alert(`Volunteer accepted! Atomic Member Code minted: ${data.member.member_code}`);
+      } else {
+        alert('Application marked as DECLINED.');
+      }
+      loadHRRoster();
+    } else {
+      alert(`Error: ${data.error || 'Review operation failed'}`);
+    }
+  } catch (err) {
+    alert(`Network Error: ${err.message}`);
+  }
+}
+
+// -------------------------------------------------------------
+// Branch Lead Actions: Collections & Weekly Reporting
+// -------------------------------------------------------------
 async function handleRecordCollection(event) {
   event.preventDefault();
   const amountPkr = parseInt(document.getElementById('col-amount-pkr').value, 10);
@@ -214,7 +306,7 @@ async function handleRecordCollection(event) {
   });
 
   if (res.ok) {
-    alert('Collection recorded in Paisa ledger.');
+    alert(`Collection of PKR ${amountPkr.toLocaleString()} committed to Paisa ledger (${amountPaisa} paisa).`);
     event.target.reset();
   } else {
     const err = await res.json();
@@ -239,7 +331,7 @@ async function handleCreateReport(event) {
   });
 
   if (res.ok) {
-    alert('Draft report generated.');
+    alert('Draft weekly report generated from collections.');
     loadBranchLeadReports();
     event.target.reset();
   } else {
@@ -265,7 +357,9 @@ async function loadBranchLeadReports() {
         <td>PKR ${(Number(r.total_amount_paisa) / 100).toLocaleString()}</td>
         <td><span class="role-badge">${r.status}</span></td>
         <td>
-          ${r.status === 'DRAFT' || r.status === 'RETURNED' ? `<button class="btn btn-outline" onclick="submitReport('${r.id}')">Submit to HQ</button>` : 'Locked'}
+          ${r.status === 'DRAFT' || r.status === 'RETURNED' 
+            ? `<button class="btn btn-primary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="submitReport('${r.id}')">Submit to HQ</button>` 
+            : '<span style="color: #64748b; font-size: 0.85rem;">Locked / Under Review</span>'}
         </td>
       </tr>
     `).join('');
@@ -280,28 +374,15 @@ async function submitReport(id) {
   if (res.ok) {
     alert('Report submitted for central review.');
     loadBranchLeadReports();
+  } else {
+    const err = await res.json();
+    alert(`Submission error: ${err.error}`);
   }
 }
 
-async function loadHRRoster() {
-  const tbody = document.querySelector('#hr-roster-table tbody');
-  const res = await fetch('/members', {
-    headers: { 'Authorization': `Bearer ${localStorage.getItem('shiplens_token')}` }
-  });
-  if (res.ok) {
-    const members = await res.json();
-    tbody.innerHTML = members.map((m) => `
-      <tr>
-        <td><strong>${m.member_code}</strong></td>
-        <td>${m.full_name}</td>
-        <td>${m.branch_name}</td>
-        <td>${m.email}</td>
-        <td><span class="role-badge">${m.status}</span></td>
-      </tr>
-    `).join('');
-  }
-}
-
+// -------------------------------------------------------------
+// Finance Reviewer Actions: Approve & Freeze Snapshots
+// -------------------------------------------------------------
 async function loadFinanceQueue() {
   const tbody = document.querySelector('#finance-reports-table tbody');
   const res = await fetch('/reports?status=SUBMITTED', {
@@ -315,12 +396,13 @@ async function loadFinanceQueue() {
     }
     tbody.innerHTML = reports.map((r) => `
       <tr>
-        <td>${r.id.slice(0, 8)}...</td>
+        <td><code>${r.id.slice(0, 8)}...</code></td>
         <td>${r.week_start_date} to ${r.week_end_date}</td>
         <td>PKR ${(Number(r.total_amount_paisa) / 100).toLocaleString()}</td>
         <td><span class="role-badge">${r.status}</span></td>
         <td>
-          <button class="btn btn-primary" onclick="approveReport('${r.id}')">Approve & Freeze</button>
+          <button class="btn btn-primary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="approveReport('${r.id}')">Approve & Freeze</button>
+          <button class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="returnReport('${r.id}')">Return</button>
         </td>
       </tr>
     `).join('');
@@ -333,8 +415,33 @@ async function approveReport(id) {
     headers: { 'Authorization': `Bearer ${localStorage.getItem('shiplens_token')}` }
   });
   if (res.ok) {
-    alert('Report approved. Collections locked and metrics snapshot frozen.');
+    alert('Report approved. Weekly collections locked and frozen metrics snapshot generated.');
     loadFinanceQueue();
+  } else {
+    const err = await res.json();
+    alert(`Approval error: ${err.error}`);
+  }
+}
+
+async function returnReport(id) {
+  const reason = prompt('Enter rejection / clarification notes for the branch lead:');
+  if (!reason) return;
+
+  const res = await fetch(`/reports/${id}/return`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${localStorage.getItem('shiplens_token')}`
+    },
+    body: JSON.stringify({ rejectionReason: reason })
+  });
+
+  if (res.ok) {
+    alert('Report returned to branch lead.');
+    loadFinanceQueue();
+  } else {
+    const err = await res.json();
+    alert(`Error: ${err.error}`);
   }
 }
 

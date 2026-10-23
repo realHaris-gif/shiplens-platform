@@ -80,7 +80,7 @@
       </div>
     </section>
 
-    <!-- View 2: Authentication Modal/View -->
+    <!-- View 2: Authentication View -->
     <section id="login-view" class="view hidden">
       <div class="card form-card login-card">
         <h2 data-i18n="login_title">Staff & Officer Authentication</h2>
@@ -188,7 +188,29 @@
         </div>
       </div>
 
+      <!-- Pending Applications Queue -->
       <div class="card">
+        <h3>Pending Volunteer Applications</h3>
+        <div class="table-responsive">
+          <table class="data-table" id="hr-applications-table">
+            <thead>
+              <tr>
+                <th>Applicant Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Preferred Branch</th>
+                <th>Review Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="5" class="text-center">Loading applications...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Active Members Roster -->
+      <div class="card mt-4">
         <h3>Active Member Roster</h3>
         <div class="table-responsive">
           <table class="data-table" id="hr-roster-table">

@@ -178,4 +178,23 @@ export class MemberService {
     const res = await pool.query(query, params);
     return res.rows;
   }
+  /**
+   * List volunteer applications (for HR review)
+   */
+  static async listApplications(status?: string) {
+    let query = `
+      SELECT a.*, b.name AS preferred_branch_name, b.code AS preferred_branch_code
+      FROM volunteer_applications a
+      LEFT JOIN branches b ON a.preferred_branch_id = b.id
+      WHERE 1=1
+    `;
+    const params: any[] = [];
+    if (status) {
+      params.push(status);
+      query += ` AND a.status = $${params.length}`;
+    }
+    query += ' ORDER BY a.created_at DESC';
+    const res = await pool.query(query, params);
+    return res.rows;
+  }
 }
