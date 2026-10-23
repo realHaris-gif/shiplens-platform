@@ -13,8 +13,16 @@ const app: Application = express();
 app.use(express.json());
 app.use(cookieParser());
 
-// Serve static frontend assets
-app.use(express.static(path.join(__dirname, 'public')));
+// Define public folder path
+const publicPath = path.resolve(__dirname, 'public');
+
+// Serve static assets with index.html enabled
+app.use(express.static(publicPath, { index: 'index.html' }));
+
+// Explicit GET / handler
+app.get('/', (_req, res) => {
+  res.sendFile(path.join(publicPath, 'index.html'));
+});
 
 // API routes
 app.use(healthRoutes);
@@ -24,9 +32,12 @@ app.use(memberRoutes);
 app.use(collectionRoutes);
 app.use(reportRoutes);
 
-// Fallback to index.html for root navigation
-app.get('*', (_req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// Catch-all SPA fallback for non-API GET routes
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api') || req.path.startsWith('/health')) {
+    return next();
+  }
+  return res.sendFile(path.join(publicPath, 'index.html'));
 });
 
 export default app;
