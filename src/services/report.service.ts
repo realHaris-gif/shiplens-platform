@@ -18,6 +18,29 @@ export class ReportService {
     actorId: string,
     ipAddress?: string
   ) {
+    // 0. Strict Date Validation
+    if (!input.weekStartDate || !input.weekEndDate) {
+      throw new Error('Both weekStartDate and weekEndDate are required');
+    }
+
+    const startDate = new Date(input.weekStartDate);
+    const endDate = new Date(input.weekEndDate);
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      throw new Error('Invalid date format for weekStartDate or weekEndDate');
+    }
+
+    if (endDate < startDate) {
+      throw new Error('Week End Date cannot be earlier than Week Start Date');
+    }
+
+    // Ensure period spans exactly 7 days (0 to 6 days difference)
+    const diffTime = endDate.getTime() - startDate.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 3600 * 24));
+    if (diffDays !== 6) {
+      throw new Error('A weekly report period must span exactly 7 days (Monday to Sunday)');
+    }
+
     const client = await pool.connect();
     try {
       await client.query('BEGIN');

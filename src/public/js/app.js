@@ -58,6 +58,11 @@ async function safeJson(response) {
   throw new Error(`Server returned unexpected ${response.status} response (${text.slice(0, 80).trim()}...)`);
 }
 
+function formatDateDisplay(rawDate) {
+  if (!rawDate) return '';
+  return typeof rawDate === 'string' ? rawDate.split('T')[0] : new Date(rawDate).toISOString().split('T')[0];
+}
+
 function toggleLanguage() {
   currentLang = currentLang === 'en' ? 'ur' : 'en';
   document.documentElement.setAttribute('lang', currentLang);
@@ -332,6 +337,15 @@ async function handleRecordCollection(event) {
 
 async function handleCreateReport(event) {
   event.preventDefault();
+  const startDate = document.getElementById('rep-start').value;
+  const endDate = document.getElementById('rep-end').value;
+
+  // Frontend guard: prevent inverted dates
+  if (new Date(endDate) < new Date(startDate)) {
+    alert('Validation Error: Week End Date cannot be earlier than Week Start Date.');
+    return;
+  }
+
   try {
     const res = await fetch('/reports', {
       method: 'POST',
@@ -341,8 +355,8 @@ async function handleCreateReport(event) {
       },
       body: JSON.stringify({
         branchId: currentUser.branchId,
-        weekStartDate: document.getElementById('rep-start').value,
-        weekEndDate: document.getElementById('rep-end').value,
+        weekStartDate: startDate,
+        weekEndDate: endDate,
         submissionNotes: document.getElementById('rep-notes').value
       })
     });
@@ -376,7 +390,7 @@ async function loadBranchLeadReports() {
       }
       tbody.innerHTML = reports.map((r) => `
         <tr>
-          <td>${r.week_start_date} to ${r.week_end_date}</td>
+          <td>${formatDateDisplay(r.week_start_date)} to ${formatDateDisplay(r.week_end_date)}</td>
           <td>PKR ${(Number(r.total_amount_paisa) / 100).toLocaleString()}</td>
           <td><span class="role-badge">${r.status}</span></td>
           <td>
@@ -428,7 +442,7 @@ async function loadFinanceQueue() {
       tbody.innerHTML = reports.map((r) => `
         <tr>
           <td><code>${r.id.slice(0, 8)}...</code></td>
-          <td>${r.week_start_date} to ${r.week_end_date}</td>
+          <td>${formatDateDisplay(r.week_start_date)} to ${formatDateDisplay(r.week_end_date)}</td>
           <td>PKR ${(Number(r.total_amount_paisa) / 100).toLocaleString()}</td>
           <td><span class="role-badge">${r.status}</span></td>
           <td>
@@ -490,6 +504,30 @@ async function returnReport(id) {
 // Initial bootstrap
 window.addEventListener('DOMContentLoaded', () => {
   fetchBranches();
+
+  const repStart = document.getElementById('rep-start');
+  const repEnd = document.getElementById('rep-end');
+
+  if (repStart && repEnd) {
+    repStart.addEventListener('change', () => {
+      if (!repStart.value) return;
+
+      const [year, month, day] = repStart.value.split('-').map(Number);
+      const start = new Date(year, month - 1, day);
+
+      // Auto-set end date to the following Sunday (+6 days)
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+
+      const endYear = end.getFullYear();
+      const endMonth = String(end.getMonth() + 1).padStart(2, '0');
+      const endDay = String(end.getDate()).padStart(2, '0');
+
+      repEnd.value = `${endYear}-${endMonth}-${endDay}`;
+      repEnd.min = repStart.value; // Prevent user from picking an earlier date
+    });
+  }
+
   const token = localStorage.getItem('shiplens_token');
   if (token) {
     try {

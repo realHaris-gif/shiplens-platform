@@ -11,6 +11,18 @@ export class ReportController {
       return res.status(400).json({ error: 'branchId, weekStartDate, and weekEndDate are required' });
     }
 
+    // Pre-flight Date Validation
+    const start = new Date(weekStartDate);
+    const end = new Date(weekEndDate);
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return res.status(400).json({ error: 'Invalid date format for weekStartDate or weekEndDate' });
+    }
+
+    if (end < start) {
+      return res.status(400).json({ error: 'Week End Date cannot be earlier than Week Start Date' });
+    }
+
     if (req.user?.role === Role.BRANCH_LEAD && req.user.branchId !== branchId) {
       return res.status(403).json({ error: 'Forbidden: Cannot create reports for another branch' });
     }
@@ -50,6 +62,10 @@ export class ReportController {
   static async returnReport(req: AuthenticatedRequest, res: Response) {
     const { id } = req.params;
     const { rejectionReason } = req.body;
+
+    if (!rejectionReason || !rejectionReason.trim()) {
+      return res.status(400).json({ error: 'rejectionReason is required' });
+    }
 
     try {
       const returned = await ReportService.returnReport(
