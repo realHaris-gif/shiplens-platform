@@ -36,4 +36,13 @@ router.get(
   CollectionController.list
 );
 
+
+// in src/routes/collection.routes.ts
+router.post('/collections', authenticate, CollectionController.record);
+router.get('/collections', authenticate, CollectionController.list);
+router.get('/collections/unrouted', authenticate, CollectionController.listUnrouted);
+router.patch('/collections/:id', authenticate, CollectionController.update);
+router.patch('/collections/:id/lock', authenticate, CollectionController.lock);
+router.patch('/collections/:id/transfer', authenticate, CollectionController.transfer);
+
 export default router;
