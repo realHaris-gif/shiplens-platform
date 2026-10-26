@@ -35,6 +35,14 @@ router.patch(
   ReportController.returnReport
 );
 
+// CSV Export with formula injection protection
+router.get(
+  '/reports/export/csv',
+  authenticate,
+  requireRoles([Role.SUPER_ADMIN, Role.FINANCE_REVIEWER, Role.BRANCH_LEAD]),
+  ReportController.exportCsv
+);
+
 // List reports
 router.get(
   '/reports',

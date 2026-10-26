@@ -7,6 +7,8 @@ import branchRoutes from './routes/branch.routes';
 import memberRoutes from './routes/member.routes';
 import collectionRoutes from './routes/collection.routes';
 import reportRoutes from './routes/report.routes';
+import { pool } from './config/db';
+import contentRoutes from './routes/content.routes';
 
 const app: Application = express();
 
@@ -43,5 +45,26 @@ app.get('*', (req: Request, res: Response, next: NextFunction) => {
 app.use((_req: Request, res: Response) => {
   res.status(404).json({ error: 'Endpoint not found' });
 });
+app.get('/health', async (_req, res) => {
+  try {
+    const dbRes = await pool.query('SELECT 1 AS ok');
+    if (dbRes.rows[0]?.ok === 1) {
+      return res.status(200).json({
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        database: 'connected',
+        uptime: process.uptime(),
+      });
+    }
+    return res.status(503).json({ status: 'unhealthy', database: 'query_failed' });
+  } catch (error: any) {
+    return res.status(503).json({
+      status: 'unhealthy',
+      database: 'disconnected',
+      error: error.message,
+    });
+  }
+});
+app.use(contentRoutes);
 
 export default app;

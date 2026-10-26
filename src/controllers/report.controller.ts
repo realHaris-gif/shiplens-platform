@@ -97,4 +97,77 @@ export class ReportController {
       return res.status(500).json({ error: error.message });
     }
   }
+  // Append this method inside ReportController in src/controllers/report.controller.ts
+
+  static async exportCsv(req: AuthenticatedRequest, res: Response) {
+    let branchId = req.query.branchId as string | undefined;
+
+    if (req.user?.role === Role.BRANCH_LEAD) {
+      branchId = req.user.branchId || undefined;
+    }
+
+    try {
+      const reports = await ReportService.listReports({
+        branchId,
+        status: req.query.status as string | undefined,
+      });
+
+      // Helper function to sanitize against CSV / Formula Injection
+      const sanitizeCell = (value: any): string => {
+        if (value === null || value === undefined) return '""';
+        let str = String(value);
+
+        // Neutralize executable formula triggers (=, +, -, @, tabs)
+        if (/^[=+\-@\t\r]/.test(str)) {
+          str = `'${str}`;
+        }
+
+        // Escape double quotes and enclose in quotes
+        return `"${str.replace(/"/g, '""')}"`;
+      };
+
+      const headers = [
+        'Report ID',
+        'Branch ID',
+        'Week Start Date',
+        'Week End Date',
+        'Total Collections (PKR)',
+        'Total Paisa',
+        'Status',
+        'Submission Notes',
+        'Rejection Reason',
+        'Created At',
+      ];
+
+      const csvRows = [headers.join(',')];
+
+      for (const r of reports) {
+        const pkr = (Number(r.total_amount_paisa) / 100).toFixed(2);
+        const row = [
+          sanitizeCell(r.id),
+          sanitizeCell(r.branch_id),
+          sanitizeCell(r.week_start_date),
+          sanitizeCell(r.week_end_date),
+          sanitizeCell(pkr),
+          sanitizeCell(r.total_amount_paisa),
+          sanitizeCell(r.status),
+          sanitizeCell(r.submission_notes || ''),
+          sanitizeCell(r.rejection_reason || ''),
+          sanitizeCell(r.created_at),
+        ];
+        csvRows.push(row.join(','));
+      }
+
+      const csvData = csvRows.join('\r\n');
+
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="shiplens-reports-${new Date().toISOString().split('T')[0]}.csv"`
+      );
+      return res.status(200).send(csvData);
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message });
+    }
+  }
 }

@@ -13,6 +13,8 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      # Automatically run SQL migrations on first container startup
+      - ./src/db/migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U shiplens_user -d shiplens_db"]
       interval: 5s
@@ -34,6 +36,7 @@ services:
       NODE_ENV: production
       PORT: 3000
       DATABASE_URL: postgresql://shiplens_user:shiplens_secret@postgres:5432/shiplens_db
+      JWT_SECRET: shiplens-docker-local-secret-32-chars-long-prod-key
 
 volumes:
   pgdata:

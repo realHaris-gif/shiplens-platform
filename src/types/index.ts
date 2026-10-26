@@ -5,6 +5,24 @@ export enum Role {
   BRANCH_LEAD = 'BRANCH_LEAD',
   HR_LEAD = 'HR_LEAD',
 }
+export enum ContentStatus {
+  DRAFT = 'DRAFT',
+  PUBLISHED = 'PUBLISHED',
+}
+
+export interface ContentItem {
+  id: string;
+  slug: string;
+  title: string;
+  summary?: string | null;
+  body: string;
+  status: ContentStatus;
+  category: string;
+  published_at?: Date | null;
+  author_id?: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
 
 export enum BranchStatus {
   FORMING = 'FORMING',

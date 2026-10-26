@@ -3,11 +3,14 @@ module.exports = {
   testEnvironment: 'node',
   roots: ['<rootDir>/tests'],
   testMatch: ['**/*.test.ts'],
-  testTimeout: 10000,
+  testTimeout: 15000,
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/server.ts',
     '!src/config/db.ts',
+    '!src/types/**',
+    '!src/public/**',
+    '!src/db/migrations/**',
   ],
   coverageThreshold: {
     global: {

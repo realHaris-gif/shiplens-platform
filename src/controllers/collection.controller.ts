@@ -11,18 +11,37 @@ export class CollectionController {
       return res.status(400).json({ error: 'branchId, amountPaisa, and collectionDate are required' });
     }
 
-    // Branch isolation: A BRANCH_LEAD can only log for their assigned branch
     if (req.user?.role === Role.BRANCH_LEAD && req.user.branchId !== branchId) {
       return res.status(403).json({ error: 'Forbidden: Cannot record collections for another branch' });
     }
 
     try {
       const record = await CollectionService.recordCollection(
-        { branchId, amountPaisa, collectionDate },
+        { branchId, amountPaisa: Number(amountPaisa), collectionDate },
         req.user!.userId,
         req.ip
       );
       return res.status(201).json(record);
+    } catch (error: any) {
+      return res.status(422).json({ error: error.message });
+    }
+  }
+
+  static async update(req: AuthenticatedRequest, res: Response) {
+    const { id } = req.params;
+    const { amountPaisa, collectionDate } = req.body;
+
+    try {
+      const updated = await CollectionService.updateCollection(
+        id,
+        {
+          amountPaisa: amountPaisa !== undefined ? Number(amountPaisa) : undefined,
+          collectionDate,
+        },
+        req.user!.userId,
+        req.ip
+      );
+      return res.status(200).json(updated);
     } catch (error: any) {
       return res.status(422).json({ error: error.message });
     }
@@ -51,7 +70,6 @@ export class CollectionController {
   static async list(req: AuthenticatedRequest, res: Response) {
     let branchId = req.query.branchId as string | undefined;
 
-    // Enforce branch isolation for branch leads
     if (req.user?.role === Role.BRANCH_LEAD) {
       branchId = req.user.branchId || undefined;
     }
@@ -59,6 +77,21 @@ export class CollectionController {
     try {
       const collections = await CollectionService.listCollections(branchId);
       return res.status(200).json(collections);
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  static async listUnrouted(req: AuthenticatedRequest, res: Response) {
+    let branchId = req.query.branchId as string | undefined;
+
+    if (req.user?.role === Role.BRANCH_LEAD) {
+      branchId = req.user.branchId || undefined;
+    }
+
+    try {
+      const unrouted = await CollectionService.listUnroutedCollections(branchId);
+      return res.status(200).json(unrouted);
     } catch (error: any) {
       return res.status(500).json({ error: error.message });
     }

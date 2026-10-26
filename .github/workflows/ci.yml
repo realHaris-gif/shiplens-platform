@@ -25,6 +25,12 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+    env:
+      DATABASE_URL: postgresql://shiplens_user:shiplens_secret@localhost:5432/shiplens_db
+      NODE_ENV: test
+      PORT: 3000
+      JWT_SECRET: ci-test-secret-key-32-chars-long-minimum-integrity
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -38,13 +44,20 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      - name: Run Schema Migrations
+        run: |
+          for file in $(ls -1 src/db/migrations/*.sql | sort); do
+            echo "Applying migration: $file"
+            PGPASSWORD=shiplens_secret psql -h localhost -U shiplens_user -d shiplens_db -f "$file"
+          done
+
+      - name: Compile TypeScript & Copy Assets
+        run: npm run build
+
       - name: Run Linter
         run: npm run lint --if-present
 
       - name: Run Test Suite with Coverage
-        env:
-          DATABASE_URL: postgresql://shiplens_user:shiplens_secret@localhost:5432/shiplens_db
-          NODE_ENV: test
         run: npm run test:coverage
 
       - name: Build Docker Image

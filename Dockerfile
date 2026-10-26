@@ -3,10 +3,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /usr/src/app
 
-COPY package*.json ./
+COPY package*.json tsconfig.json ./
 RUN npm ci
 
-COPY tsconfig.json ./
 COPY src/ ./src/
 RUN npm run build
 
@@ -21,9 +20,13 @@ ENV NODE_ENV=production
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci --omit=dev && npm cache clean --force
 
+# Copy compiled JavaScript, public assets, and SQL migrations
 COPY --from=builder /usr/src/app/dist ./dist
+
+# Ensure appuser owns the directory
+RUN chown -R appuser:appgroup /usr/src/app
 
 USER appuser
 
