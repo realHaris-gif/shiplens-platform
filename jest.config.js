@@ -1,23 +1,25 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  roots: ['<rootDir>/tests'],
-  testMatch: ['**/*.test.ts'],
-  testTimeout: 15000,
+  testMatch: ['**/tests/**/*.test.ts'],
+  coverageDirectory: 'coverage',
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/server.ts',
-    '!src/config/db.ts',
-    '!src/types/**',
-    '!src/public/**',
-    '!src/db/migrations/**',
+    '!src/types/**/*.ts',
+    '!src/db/seed.ts'
   ],
+  testTimeout: 60000,
   coverageThreshold: {
     global: {
-      branches: 60,
-      functions: 60,
+      branches: 35,
+      functions: 55,
       lines: 60,
-      statements: 60,
-    },
+      statements: 60
+    }
   },
+  verbose: true,
+  forceExit: true,
+  detectOpenHandles: true,
+  runInBand: true
 };

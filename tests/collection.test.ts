@@ -13,6 +13,7 @@ describe('Offline Collections & Paisa Financial Ledger (Day 6)', () => {
   let otherBranchId: string;
   let leadId: string;
   let financeId: string;
+  jest.setTimeout(30000);
 
   beforeAll(async () => {
     await runMigrations();

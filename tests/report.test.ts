@@ -13,6 +13,7 @@ describe('Weekly Reports & Frozen Metrics Architecture (Day 7)', () => {
   let leadId: string;
   let financeId: string;
   const uniquePrefix = Date.now().toString().slice(-6);
+  jest.setTimeout(30000);
 
   beforeAll(async () => {
     await runMigrations();
