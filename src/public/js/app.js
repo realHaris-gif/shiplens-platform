@@ -67,7 +67,8 @@ function toggleLanguage() {
   currentLang = currentLang === 'en' ? 'ur' : 'en';
   document.documentElement.setAttribute('lang', currentLang);
   document.documentElement.setAttribute('dir', currentLang === 'ur' ? 'rtl' : 'ltr');
-  document.getElementById('lang-label').innerText = i18n[currentLang].lang_toggle_text;
+  const langLabel = document.getElementById('lang-label');
+  if (langLabel) langLabel.innerText = i18n[currentLang].lang_toggle_text;
 
   document.querySelectorAll('[data-i18n]').forEach((el) => {
     const key = el.getAttribute('data-i18n');
@@ -83,7 +84,37 @@ function showView(viewId) {
   if (target) target.classList.remove('hidden');
 }
 
-// Fetch active branches for dropdown
+// 7 Public Pages Router
+function navigateTo(pageName) {
+  // Update active state on nav links
+  document.querySelectorAll('#public-nav .nav-item').forEach((link) => {
+    link.classList.remove('active');
+    if (link.getAttribute('href') === `#${pageName}`) {
+      link.classList.add('active');
+    }
+  });
+
+  const viewMap = {
+    'home': 'view-home',
+    'about': 'view-about',
+    'programs': 'view-programs',
+    'branches': 'view-branches',
+    'events': 'view-events',
+    'get-involved': 'view-get-involved',
+    'contact': 'view-contact'
+  };
+
+  const targetViewId = viewMap[pageName] || 'view-home';
+  showView(targetViewId);
+
+  if (pageName === 'home') {
+    loadHomeBulletins();
+  } else if (pageName === 'branches') {
+    renderPublicBranchesTable();
+  }
+}
+
+// Fetch active branches for dropdown and public directory
 async function fetchBranches() {
   try {
     const res = await fetch('/branches');
@@ -99,9 +130,55 @@ async function fetchBranches() {
           select.appendChild(opt);
         });
       }
+      renderPublicBranchesTable();
     }
   } catch (e) {
     console.error('Error loading branches:', e);
+  }
+}
+
+// Populate Public Branches Directory Table
+function renderPublicBranchesTable() {
+  const tbody = document.querySelector('#public-branches-table tbody');
+  if (!tbody || branches.length === 0) return;
+
+  tbody.innerHTML = branches.map((b) => `
+    <tr>
+      <td><strong>${b.code}</strong></td>
+      <td>${b.name}</td>
+      <td>${b.city}</td>
+      <td><span class="role-badge" style="background:#059669; color:#fff;">ACTIVE</span></td>
+    </tr>
+  `).join('');
+}
+
+// Fetch published bulletins from /content
+async function loadHomeBulletins() {
+  const container = document.getElementById('home-bulletins-list');
+  if (!container) return;
+
+  try {
+    const res = await fetch('/content', {
+      headers: { 'Accept': 'application/json' }
+    });
+    if (res.ok) {
+      const items = await safeJson(res);
+      if (items.length === 0) {
+        container.innerHTML = '<p style="color: #64748b; font-style: italic;">No public bulletins published at this time.</p>';
+        return;
+      }
+      container.innerHTML = items.map((item) => `
+        <div style="border-bottom: 1px solid #e2e8f0; padding: 0.75rem 0;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <h4 style="margin: 0; color: #0f172a;">${item.title}</h4>
+            <small style="color: #64748b;">${new Date(item.published_at || item.created_at).toLocaleDateString()}</small>
+          </div>
+          <p style="margin: 0.25rem 0 0 0; color: #475569; font-size: 0.95rem;">${item.summary || item.body.slice(0, 160)}...</p>
+        </div>
+      `).join('');
+    }
+  } catch (err) {
+    container.innerHTML = '<p style="color: #ef4444;">Unable to load public bulletins.</p>';
   }
 }
 
@@ -195,7 +272,7 @@ function renderAuthenticatedState() {
       loadFinanceQueue();
       break;
     default:
-      showView('public-view');
+      navigateTo('home');
   }
 }
 
@@ -204,7 +281,7 @@ function logout() {
   localStorage.removeItem('shiplens_token');
   document.getElementById('user-profile').classList.add('hidden');
   document.getElementById('auth-buttons').classList.remove('hidden');
-  showView('public-view');
+  navigateTo('home');
 }
 
 // HR Actions: Load Applications, Review & Accept
@@ -501,10 +578,33 @@ async function returnReport(id) {
   }
 }
 
+// Download formula-sanitized reports CSV
+function exportReportsCsv() {
+  const token = localStorage.getItem('shiplens_token');
+  fetch('/reports/export/csv', {
+    headers: { 'Authorization': `Bearer ${token}` }
+  })
+  .then((res) => {
+    if (!res.ok) throw new Error('Failed to generate CSV export');
+    return res.blob();
+  })
+  .then((blob) => {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `shiplens-reports-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  })
+  .catch((err) => alert(err.message));
+}
+
 // Initial bootstrap
 window.addEventListener('DOMContentLoaded', () => {
   fetchBranches();
 
+  // Attach datepicker auto-calculation listeners for weekly reports
   const repStart = document.getElementById('rep-start');
   const repEnd = document.getElementById('rep-end');
 
@@ -527,6 +627,10 @@ window.addEventListener('DOMContentLoaded', () => {
       repEnd.min = repStart.value; // Prevent user from picking an earlier date
     });
   }
+
+  // Handle direct hash navigation (#about, #branches, etc.)
+  const currentHash = window.location.hash.replace('#', '') || 'home';
+  navigateTo(currentHash);
 
   const token = localStorage.getItem('shiplens_token');
   if (token) {

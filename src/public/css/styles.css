@@ -1,6 +1,6 @@
 :root {
-  --primary: #0284c7;
-  --primary-hover: #0369a1;
+  --primary: #059669;
+  --primary-hover: #047857;
   --surface: #ffffff;
   --background: #f8fafc;
   --text-main: #0f172a;
@@ -14,33 +14,42 @@
   --font-ur: 'Noto Nastaliq Urdu', serif;
 }
 
-[dir="rtl"] {
-  font-family: var(--font-ur);
-  text-align: right;
-}
-
-[dir="ltr"] {
-  font-family: var(--font-en);
-  text-align: left;
-}
-
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
+[dir="ltr"] {
+  font-family: var(--font-en);
+  text-align: left;
+  line-height: 1.6;
+}
+
+[dir="rtl"] {
+  font-family: var(--font-ur);
+  text-align: right;
+  line-height: 2.1; /* Nastaliq requires extra vertical clearance */
+}
+
+[dir="rtl"] input,
+[dir="rtl"] select,
+[dir="rtl"] textarea,
+[dir="rtl"] button {
+  font-family: var(--font-ur);
+}
+
 body {
   background-color: var(--background);
   color: var(--text-main);
-  line-height: 1.6;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
 .container {
-  max-width: 1100px;
+  max-width: 1140px;
+  width: 100%;
   margin: 0 auto;
   padding: 2rem 1.5rem;
   flex: 1;
@@ -50,10 +59,12 @@ body {
 .navbar {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  padding: 1rem 1.5rem;
+  padding: 0.85rem 1.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .nav-brand {
@@ -62,6 +73,8 @@ body {
   gap: 0.75rem;
   font-weight: 700;
   font-size: 1.25rem;
+  color: var(--text-main);
+  text-decoration: none;
 }
 
 .logo-icon {
@@ -72,14 +85,39 @@ body {
   font-size: 0.75rem;
   padding: 0.2rem 0.5rem;
   border-radius: 999px;
-  background: #e0f2fe;
-  color: #0369a1;
+  background: #d1fae5;
+  color: #065f46;
+  font-weight: 600;
+}
+
+.nav-links {
+  display: flex;
+  gap: 1.25rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.nav-item {
+  color: #475569;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.95rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.nav-item:hover,
+.nav-item.active {
+  color: var(--primary);
+  background: #ecfdf5;
+  font-weight: 600;
 }
 
 .nav-actions {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 /* Cards & Layout */
@@ -88,12 +126,12 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1.75rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .hero {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 2.5rem;
 }
 
 .hero h1 {
@@ -101,16 +139,18 @@ body {
   font-weight: 800;
   color: var(--text-main);
   margin-bottom: 0.75rem;
+  letter-spacing: -0.02em;
 }
 
 .hero p {
   color: var(--text-muted);
-  max-width: 650px;
+  max-width: 680px;
   margin: 0 auto;
+  font-size: 1.05rem;
 }
 
 .form-card {
-  max-width: 600px;
+  max-width: 640px;
   margin: 0 auto;
 }
 
@@ -142,23 +182,28 @@ label {
   display: block;
   font-size: 0.875rem;
   font-weight: 600;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.4rem;
 }
 
-input, select, textarea {
+input,
+select,
+textarea {
   width: 100%;
   padding: 0.65rem 0.85rem;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   font-size: 0.95rem;
   font-family: inherit;
-  background: #fff;
+  background: #ffffff;
+  color: var(--text-main);
 }
 
-input:focus, select:focus, textarea:focus {
+input:focus,
+select:focus,
+textarea:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
 }
 
 /* Buttons */
@@ -173,12 +218,14 @@ input:focus, select:focus, textarea:focus {
   cursor: pointer;
   border: none;
   transition: all 0.15s ease-in-out;
+  text-decoration: none;
 }
 
 .btn-primary {
   background: var(--primary);
-  color: #fff;
+  color: #ffffff;
 }
+
 .btn-primary:hover {
   background: var(--primary-hover);
 }
@@ -187,6 +234,7 @@ input:focus, select:focus, textarea:focus {
   background: #f1f5f9;
   color: #334155;
 }
+
 .btn-secondary:hover {
   background: #e2e8f0;
 }
@@ -197,16 +245,35 @@ input:focus, select:focus, textarea:focus {
   color: var(--text-main);
 }
 
+.btn-outline:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
 .btn-link {
   background: transparent;
   color: var(--primary);
   text-decoration: underline;
   padding: 0.5rem;
+  cursor: pointer;
 }
 
 .btn-block {
   width: 100%;
   margin-top: 0.5rem;
+}
+
+/* Grids */
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
 }
 
 /* Tables */
@@ -225,8 +292,9 @@ input:focus, select:focus, textarea:focus {
   text-align: right;
 }
 
-.data-table th, .data-table td {
-  padding: 0.75rem 1rem;
+.data-table th,
+.data-table td {
+  padding: 0.85rem 1rem;
   border-bottom: 1px solid var(--border);
   font-size: 0.875rem;
 }
@@ -234,15 +302,18 @@ input:focus, select:focus, textarea:focus {
 .data-table th {
   background: #f8fafc;
   font-weight: 600;
+  color: #475569;
 }
 
-/* Role Badges & Status */
+/* Role Badges & Alerts */
 .role-badge {
-  padding: 0.2rem 0.5rem;
+  padding: 0.2rem 0.55rem;
   border-radius: 4px;
   font-size: 0.75rem;
   font-weight: 700;
   background: #f1f5f9;
+  color: #334155;
+  display: inline-block;
 }
 
 .alert {
@@ -251,15 +322,25 @@ input:focus, select:focus, textarea:focus {
   margin-bottom: 1rem;
   font-size: 0.875rem;
 }
-.alert-success { background: #dcfce7; color: #15803d; }
-.alert-error { background: #fee2e2; color: #b91c1c; }
 
-.hidden { display: none !important; }
-.mt-4 { margin-top: 1.5rem; }
-.grid-2 {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 1.5rem;
+.alert-success {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.alert-error {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.mt-4 {
+  margin-top: 1.5rem;
 }
 
 .footer {
@@ -268,4 +349,25 @@ input:focus, select:focus, textarea:focus {
   border-top: 1px solid var(--border);
   color: var(--text-muted);
   font-size: 0.85rem;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .navbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .nav-links {
+    width: 100%;
+    justify-content: space-between;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+  }
+  .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+  .hero h1 {
+    font-size: 1.75rem;
+  }
 }
