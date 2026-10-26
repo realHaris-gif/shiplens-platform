@@ -2,6 +2,7 @@ import express, { Application, Request, Response, NextFunction } from 'express';
 import path from 'path';
 import cookieParser from 'cookie-parser';
 import { pool } from './config/db';
+import { globalLimiter, loginLimiter, applicationLimiter } from './middleware/rateLimiter';
 
 // Route handlers
 import healthRoutes from './routes/health';
@@ -13,15 +14,18 @@ import reportRoutes from './routes/report.routes';
 import contentRoutes from './routes/content.routes';
 
 const app: Application = express();
+app.set('trust proxy', 1);
 
 // Body & Cookie parsers
 app.use(express.json());
 app.use(cookieParser());
 
+
 const publicPath = path.resolve(__dirname, 'public');
 
 // 1. Static assets (CSS, JS, images)
 app.use(express.static(publicPath, { index: 'index.html' }));
+app.use('/api', globalLimiter);
 
 // 2. Health Check Endpoint (Probes DB connectivity)
 app.get('/health', async (_req: Request, res: Response) => {
@@ -71,5 +75,7 @@ app.get('*', (req: Request, res: Response, next: NextFunction) => {
 app.use((_req: Request, res: Response) => {
   res.status(404).json({ error: 'Endpoint not found' });
 });
+app.use('/auth/login', loginLimiter);
+app.use('/applications', applicationLimiter);
 
 export default app;
