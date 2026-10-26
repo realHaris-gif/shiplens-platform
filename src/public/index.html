@@ -20,13 +20,13 @@
 
     <!-- 7 Mandatory Public Navigation Links -->
     <nav class="nav-links" id="public-nav">
-      <a href="#home" class="nav-item active" onclick="navigateTo('home')">Home</a>
-      <a href="#about" class="nav-item" onclick="navigateTo('about')">About</a>
-      <a href="#programs" class="nav-item" onclick="navigateTo('programs')">Programs</a>
-      <a href="#branches" class="nav-item" onclick="navigateTo('branches')">Branches</a>
-      <a href="#events" class="nav-item" onclick="navigateTo('events')">Events</a>
-      <a href="#get-involved" class="nav-item" onclick="navigateTo('get-involved')">Get Involved</a>
-      <a href="#contact" class="nav-item" onclick="navigateTo('contact')">Contact</a>
+      <a href="#home" class="nav-item active" onclick="navigateTo('home')" data-i18n="nav_home">Home</a>
+      <a href="#about" class="nav-item" onclick="navigateTo('about')" data-i18n="nav_about">About</a>
+      <a href="#programs" class="nav-item" onclick="navigateTo('programs')" data-i18n="nav_programs">Programs</a>
+      <a href="#branches" class="nav-item" onclick="navigateTo('branches')" data-i18n="nav_branches">Branches</a>
+      <a href="#events" class="nav-item" onclick="navigateTo('events')" data-i18n="nav_events">Events</a>
+      <a href="#get-involved" class="nav-item" onclick="navigateTo('get-involved')" data-i18n="nav_get_involved">Get Involved</a>
+      <a href="#contact" class="nav-item" onclick="navigateTo('contact')" data-i18n="nav_contact">Contact</a>
     </nav>
 
     <div class="nav-actions">
@@ -50,7 +50,7 @@
       <div class="hero">
         <h1 data-i18n="hero_title">Decentralized Governance & Operational Integrity</h1>
         <p data-i18n="hero_desc">ShipLens connects regional branches across Pakistan with centralized financial auditing, immutable logging, and volunteer management.</p>
-        <div style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: center;">
+        <div style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
           <button class="btn btn-primary" onclick="navigateTo('get-involved')">Join as a Volunteer</button>
           <button class="btn btn-outline" onclick="navigateTo('programs')">Explore Programs</button>
         </div>
@@ -167,7 +167,7 @@
       </div>
     </section>
 
-    <!-- PAGE 6: GET INVOLVED (Volunteer Application) -->
+    <!-- PAGE 6: GET INVOLVED -->
     <section id="view-get-involved" class="view hidden">
       <div class="hero">
         <h1 data-i18n="form_title">Volunteer Application</h1>
@@ -271,7 +271,8 @@
       </div>
     </section>
 
-    <!-- OPERATIONAL PORTAL VIEWS (Branch Lead, HR, Finance) -->
+    <!-- OPERATIONAL PORTAL VIEWS -->
+
     <!-- Branch Lead Dashboard -->
     <section id="branch-lead-view" class="view hidden">
       <div class="view-header">
@@ -420,6 +421,76 @@
               <tr><td colspan="5" class="text-center">Loading submitted reports...</td></tr>
             </tbody>
           </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Content Editor Console -->
+    <section id="editor-view" class="view hidden">
+      <div class="view-header">
+        <div>
+          <h2>Content & Communications Console</h2>
+          <p class="subtitle">Draft, update, and publish official bulletins to the public portal</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <!-- Draft Content Form -->
+        <div class="card">
+          <h3>Create New Bulletin</h3>
+          <p class="subtitle">Draft announcements, program updates, or event alerts</p>
+
+          <form id="editor-form" onsubmit="handleCreateContent(event)">
+            <div class="form-group">
+              <label for="post-title">Title</label>
+              <input type="text" id="post-title" required placeholder="e.g. Flood Relief Phase 2 Mobilization">
+            </div>
+
+            <div class="form-group">
+              <label for="post-category">Category</label>
+              <select id="post-category" required>
+                <option value="ANNOUNCEMENT">Announcement</option>
+                <option value="NEWS">News</option>
+                <option value="PROGRAM">Program Update</option>
+                <option value="EVENT">Event Alert</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="post-summary">Summary (Short Preview)</label>
+              <input type="text" id="post-summary" placeholder="Brief 1-2 sentence lead...">
+            </div>
+
+            <div class="form-group">
+              <label for="post-body">Body / Full Details</label>
+              <textarea id="post-body" rows="4" required placeholder="Detailed message content..."></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Save as Draft</button>
+          </form>
+        </div>
+
+        <!-- Published & Draft Articles Table -->
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3>All Articles & Bulletins</h3>
+            <button class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;" onclick="loadEditorContentList()">Refresh</button>
+          </div>
+          <div class="table-responsive mt-4">
+            <table class="data-table" id="editor-content-table">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Category</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="4" class="text-center">Loading articles...</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </section>

@@ -5,6 +5,13 @@ let branches = [];
 
 const i18n = {
   en: {
+    nav_home: 'Home',
+    nav_about: 'About',
+    nav_programs: 'Programs',
+    nav_branches: 'Branches',
+    nav_events: 'Events',
+    nav_get_involved: 'Get Involved',
+    nav_contact: 'Contact',
     hero_title: 'Decentralized Governance & Operational Integrity',
     hero_desc: 'ShipLens connects regional branches across Pakistan with centralized financial auditing, immutable logging, and volunteer management.',
     form_title: 'Volunteer Application',
@@ -26,6 +33,13 @@ const i18n = {
     lang_toggle_text: 'اردو'
   },
   ur: {
+    nav_home: 'ہوم',
+    nav_about: 'ہمارے متعلق',
+    nav_programs: 'پروگرامز',
+    nav_branches: 'شاخیں',
+    nav_events: 'تقریبات',
+    nav_get_involved: 'شمولیت',
+    nav_contact: 'رابطہ',
     hero_title: 'غیر مرکزی حکمرانی اور مالیاتی شفافیت',
     hero_desc: 'شپ لینز پاکستان بھر کی علاقائی شاخوں کو مرکزی مالیاتی آڈٹ، ناقابلِ تغیر لاگز، اور رضاکارانہ نظم و نسق سے جوڑتا ہے۔',
     form_title: 'رضاکارانہ شمولیت کی درخواست',
@@ -86,7 +100,6 @@ function showView(viewId) {
 
 // 7 Public Pages Router
 function navigateTo(pageName) {
-  // Update active state on nav links
   document.querySelectorAll('#public-nav .nav-item').forEach((link) => {
     link.classList.remove('active');
     if (link.getAttribute('href') === `#${pageName}`) {
@@ -271,6 +284,10 @@ function renderAuthenticatedState() {
       showView('finance-view');
       loadFinanceQueue();
       break;
+    case 'CONTENT_EDITOR':
+      showView('editor-view');
+      loadEditorContentList();
+      break;
     default:
       navigateTo('home');
   }
@@ -288,7 +305,6 @@ function logout() {
 async function loadHRRoster() {
   const token = localStorage.getItem('shiplens_token');
 
-  // 1. Load pending applications
   const appsTbody = document.querySelector('#hr-applications-table tbody');
   if (appsTbody) {
     try {
@@ -319,7 +335,6 @@ async function loadHRRoster() {
     }
   }
 
-  // 2. Load active members
   const rosterTbody = document.querySelector('#hr-roster-table tbody');
   if (rosterTbody) {
     try {
@@ -417,7 +432,6 @@ async function handleCreateReport(event) {
   const startDate = document.getElementById('rep-start').value;
   const endDate = document.getElementById('rep-end').value;
 
-  // Frontend guard: prevent inverted dates
   if (new Date(endDate) < new Date(startDate)) {
     alert('Validation Error: Week End Date cannot be earlier than Week Start Date.');
     return;
@@ -578,6 +592,115 @@ async function returnReport(id) {
   }
 }
 
+// Content Editor Actions
+async function loadEditorContentList() {
+  const token = localStorage.getItem('shiplens_token');
+  const tbody = document.querySelector('#editor-content-table tbody');
+  if (!tbody) return;
+
+  try {
+    const res = await fetch('/admin/content', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (res.ok) {
+      const items = await safeJson(res);
+      if (items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center">No content items created yet.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = items.map((item) => `
+        <tr>
+          <td><strong>${item.title}</strong></td>
+          <td><span class="role-badge">${item.category}</span></td>
+          <td>
+            <span class="role-badge" style="background:${item.status === 'PUBLISHED' ? '#dcfce7' : '#fef3c7'}; color:${item.status === 'PUBLISHED' ? '#15803d' : '#b45309'};">
+              ${item.status}
+            </span>
+          </td>
+          <td>
+            ${item.status === 'DRAFT' 
+              ? `<button class="btn btn-primary" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;" onclick="publishContentItem('${item.id}')">Publish</button>`
+              : `<button class="btn btn-outline" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;" onclick="unpublishContentItem('${item.id}')">Unpublish</button>`
+            }
+          </td>
+        </tr>
+      `).join('');
+    }
+  } catch (err) {
+    console.error('Failed to load editor content:', err);
+  }
+}
+
+async function handleCreateContent(event) {
+  event.preventDefault();
+  const token = localStorage.getItem('shiplens_token');
+
+  const title = document.getElementById('post-title').value;
+  const category = document.getElementById('post-category').value;
+  const summary = document.getElementById('post-summary').value;
+  const body = document.getElementById('post-body').value;
+
+  try {
+    const res = await fetch('/admin/content', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ title, category, summary, body })
+    });
+
+    const data = await safeJson(res);
+    if (res.ok) {
+      alert('Draft bulletin saved successfully.');
+      document.getElementById('editor-form').reset();
+      loadEditorContentList();
+    } else {
+      alert(`Error: ${data.error || 'Failed to save draft'}`);
+    }
+  } catch (err) {
+    alert(`Error: ${err.message}`);
+  }
+}
+
+async function publishContentItem(id) {
+  const token = localStorage.getItem('shiplens_token');
+  try {
+    const res = await fetch(`/admin/content/${id}/publish`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await safeJson(res);
+    if (res.ok) {
+      alert('Bulletin published to the public portal!');
+      loadEditorContentList();
+    } else {
+      alert(`Error: ${data.error || 'Publish failed'}`);
+    }
+  } catch (err) {
+    alert(`Error: ${err.message}`);
+  }
+}
+
+async function unpublishContentItem(id) {
+  const token = localStorage.getItem('shiplens_token');
+  try {
+    const res = await fetch(`/admin/content/${id}/unpublish`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await safeJson(res);
+    if (res.ok) {
+      alert('Bulletin reverted to draft.');
+      loadEditorContentList();
+    } else {
+      alert(`Error: ${data.error || 'Unpublish failed'}`);
+    }
+  } catch (err) {
+    alert(`Error: ${err.message}`);
+  }
+}
+
 // Download formula-sanitized reports CSV
 function exportReportsCsv() {
   const token = localStorage.getItem('shiplens_token');
@@ -604,7 +727,6 @@ function exportReportsCsv() {
 window.addEventListener('DOMContentLoaded', () => {
   fetchBranches();
 
-  // Attach datepicker auto-calculation listeners for weekly reports
   const repStart = document.getElementById('rep-start');
   const repEnd = document.getElementById('rep-end');
 
@@ -615,7 +737,6 @@ window.addEventListener('DOMContentLoaded', () => {
       const [year, month, day] = repStart.value.split('-').map(Number);
       const start = new Date(year, month - 1, day);
 
-      // Auto-set end date to the following Sunday (+6 days)
       const end = new Date(start);
       end.setDate(start.getDate() + 6);
 
@@ -624,11 +745,10 @@ window.addEventListener('DOMContentLoaded', () => {
       const endDay = String(end.getDate()).padStart(2, '0');
 
       repEnd.value = `${endYear}-${endMonth}-${endDay}`;
-      repEnd.min = repStart.value; // Prevent user from picking an earlier date
+      repEnd.min = repStart.value;
     });
   }
 
-  // Handle direct hash navigation (#about, #branches, etc.)
   const currentHash = window.location.hash.replace('#', '') || 'home';
   navigateTo(currentHash);
 
