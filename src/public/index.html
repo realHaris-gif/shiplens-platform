@@ -2,24 +2,33 @@
 <html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="ShipLens connects regional branches across Pakistan with centralized financial auditing, immutable logging, and volunteer management.">
+  <meta name="theme-color" content="#7c3aed">
   <title>ShipLens — Operational & Governance Platform</title>
-  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E⚓%3C/text%3E%3C/svg%3E">
+
+  <!-- Fonts first so the stylesheet can use them immediately -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div id="progress-bar" aria-hidden="true"></div>
+  <div id="net-banner" class="net-banner" role="status" aria-live="polite"><span class="net-dot"></span><span id="net-banner-text">No internet connection</span></div>
+
   <!-- Header / Nav -->
   <header class="navbar">
-    <div class="nav-brand" onclick="navigateTo('home')" style="cursor: pointer;">
+    <div class="nav-brand" onclick="navigateTo('home')">
       <span class="logo-icon">⚓</span>
       <span class="logo-text">ShipLens</span>
       <span class="badge" id="env-badge">Production</span>
     </div>
 
     <!-- 7 Mandatory Public Navigation Links -->
-    <nav class="nav-links" id="public-nav">
+    <nav class="nav-links" id="public-nav" aria-label="Main">
       <a href="#home" class="nav-item active" onclick="navigateTo('home')" data-i18n="nav_home">Home</a>
       <a href="#about" class="nav-item" onclick="navigateTo('about')" data-i18n="nav_about">About</a>
       <a href="#programs" class="nav-item" onclick="navigateTo('programs')" data-i18n="nav_programs">Programs</a>
@@ -30,42 +39,53 @@
     </nav>
 
     <div class="nav-actions">
-      <button id="lang-toggle" class="btn btn-secondary" onclick="toggleLanguage()">
+      <button type="button" id="lang-toggle" class="btn btn-secondary" onclick="toggleLanguage()" aria-label="Switch language">
         <span id="lang-label">اردو</span>
       </button>
       <div id="auth-buttons">
-        <button class="btn btn-primary" onclick="showView('login-view')" data-i18n="nav_login">Portal Login</button>
+        <button type="button" class="btn btn-primary" onclick="showView('login-view')" data-i18n="nav_login">Portal Login</button>
       </div>
       <div id="user-profile" class="hidden">
         <span id="user-role-badge" class="role-badge"></span>
         <span id="user-email-display"></span>
-        <button class="btn btn-outline" onclick="logout()" data-i18n="nav_logout">Sign Out</button>
+        <button type="button" class="btn btn-outline" onclick="logout()" data-i18n="nav_logout">Sign Out</button>
       </div>
     </div>
   </header>
 
-  <main class="container">
+  <main class="container" id="main">
+    <noscript><div class="alert alert-error">ShipLens needs JavaScript enabled to work.</div></noscript>
+
     <!-- PAGE 1: HOME -->
     <section id="view-home" class="view">
       <div class="hero">
         <h1 data-i18n="hero_title">Decentralized Governance & Operational Integrity</h1>
         <p data-i18n="hero_desc">ShipLens connects regional branches across Pakistan with centralized financial auditing, immutable logging, and volunteer management.</p>
-        <div style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-          <button class="btn btn-primary" onclick="navigateTo('get-involved')">Join as a Volunteer</button>
-          <button class="btn btn-outline" onclick="navigateTo('programs')">Explore Programs</button>
+        <div class="hero-actions">
+          <button type="button" class="btn btn-primary" onclick="navigateTo('get-involved')">Join as a Volunteer</button>
+          <button type="button" class="btn btn-outline" onclick="navigateTo('programs')">Explore Programs</button>
         </div>
       </div>
 
-      <div class="grid-3" style="margin-top: 2rem;">
+      <div class="grid-3 mt-2">
         <div class="card">
+          <div class="feature-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 4.5 3.2 7.8 8 9 4.8-1.2 8-4.5 8-9V6l-8-3z"/><path d="m9 12 2 2 4-4"/></svg>
+          </div>
           <h3>Immutable Financial Auditing</h3>
           <p>Integer paisa-precision ledgers, weekly snapshot freezing, and append-only database logs guarantee zero tampering across every regional branch.</p>
         </div>
         <div class="card">
+          <div class="feature-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.3 3.2-5.5 6.5-5.5s5.9 2.2 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.8c2 .7 3.2 2.5 3.5 5.2"/></svg>
+          </div>
           <h3>Volunteer to Member Pipeline</h3>
           <p>Structured intake workflow transforming community applicants into verified operational members with sequential identifier minting.</p>
         </div>
         <div class="card">
+          <div class="feature-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/></svg>
+          </div>
           <h3>Nationwide Transparency</h3>
           <p>Dual-language Urdu and English support empowering field operatives in Lahore, Karachi, and Islamabad with unified reporting.</p>
         </div>
@@ -75,8 +95,12 @@
       <div class="card mt-4">
         <h3>Live Organization Bulletins</h3>
         <p class="subtitle">Direct operational updates managed by our Communications Office.</p>
-        <div id="home-bulletins-list" style="margin-top: 1rem;">
-          <p style="color: #64748b;">Loading recent announcements...</p>
+        <div id="home-bulletins-list" style="margin-top: 1rem;" aria-busy="true">
+          <div class="skeleton-block" aria-hidden="true">
+            <div class="skeleton-item"><span class="skeleton skeleton-title"></span><span class="skeleton skeleton-line"></span><span class="skeleton skeleton-line"></span></div>
+            <div class="skeleton-item"><span class="skeleton skeleton-title"></span><span class="skeleton skeleton-line"></span><span class="skeleton skeleton-line"></span></div>
+            <div class="skeleton-item"><span class="skeleton skeleton-title"></span><span class="skeleton skeleton-line"></span><span class="skeleton skeleton-line"></span></div>
+          </div>
         </div>
       </div>
     </section>
@@ -90,7 +114,7 @@
       <div class="card">
         <h3>Our Mission</h3>
         <p>ShipLens was founded to eliminate operational friction and financial ambiguity in distributed non-profit networks. By transitioning from vulnerable paper receipts and spreadsheets to cryptographic audit trails, we ensure that every rupee collected in the field directly serves its intended civic purpose.</p>
-        <h3 style="margin-top: 1.5rem;">Governance Structure</h3>
+        <h3 class="mt-4">Governance Structure</h3>
         <p>Our organization is structured across semi-autonomous regional branches supervised by an executive Head Office. Regional leads collect dues and run field activities, while centralized Finance Reviewers audit weekly submissions before funds are remitted to main accounts.</p>
       </div>
     </section>
@@ -103,17 +127,17 @@
       </div>
       <div class="grid-3">
         <div class="card">
-          <span class="role-badge" style="margin-bottom: 0.5rem; display: inline-block;">Education</span>
+          <span class="role-badge" style="margin-bottom: 0.75rem;">Education</span>
           <h3>Community Literacy Circles</h3>
           <p>Weekend tutoring and foundational literacy programs conducted by verified ShipLens members in under-resourced public schools.</p>
         </div>
         <div class="card">
-          <span class="role-badge" style="margin-bottom: 0.5rem; display: inline-block;">Relief</span>
+          <span class="role-badge" style="margin-bottom: 0.75rem;">Relief</span>
           <h3>Rapid Emergency Logistics</h3>
           <p>Pre-positioned dry rations and basic medicine supply chains managed through localized volunteer chapters during monsoon emergencies.</p>
         </div>
         <div class="card">
-          <span class="role-badge" style="margin-bottom: 0.5rem; display: inline-block;">Youth</span>
+          <span class="role-badge" style="margin-bottom: 0.75rem;">Youth</span>
           <h3>Technical Skills Bootcamps</h3>
           <p>Vocational training workshops covering basic computing, web literacy, and digital accounting for youth volunteers.</p>
         </div>
@@ -138,7 +162,9 @@
               </tr>
             </thead>
             <tbody>
-              <tr><td colspan="4" class="text-center">Loading branch directory...</td></tr>
+              <tr class="skeleton-row" aria-hidden="true"><td colspan="4"><span class="skeleton skeleton-line"></span></td></tr>
+              <tr class="skeleton-row" aria-hidden="true"><td colspan="4"><span class="skeleton skeleton-line"></span></td></tr>
+              <tr class="skeleton-row" aria-hidden="true"><td colspan="4"><span class="skeleton skeleton-line"></span></td></tr>
             </tbody>
           </table>
         </div>
@@ -154,15 +180,15 @@
       <div class="grid-2">
         <div class="card">
           <span class="role-badge">Annual Summit</span>
-          <h3 style="margin-top: 0.5rem;">2026 Nationwide Governance Forum</h3>
+          <h3 style="margin-top: 0.75rem;">2026 Nationwide Governance Forum</h3>
           <p><strong>Date:</strong> November 15, 2026 | <strong>Location:</strong> Islamabad Central Auditorium</p>
-          <p style="margin-top: 0.5rem;">A convene of branch leadership and civil society reviewers reviewing annual transparency reports and field audit results.</p>
+          <p>A convene of branch leadership and civil society reviewers reviewing annual transparency reports and field audit results.</p>
         </div>
         <div class="card">
           <span class="role-badge">Field Training</span>
-          <h3 style="margin-top: 0.5rem;">Volunteer Intake & Field Readiness</h3>
+          <h3 style="margin-top: 0.75rem;">Volunteer Intake & Field Readiness</h3>
           <p><strong>Date:</strong> Every Saturday | <strong>Location:</strong> Local Branch Offices</p>
-          <p style="margin-top: 0.5rem;">Orientation and integrity training for recently minted members who have transitioned through the HR review process.</p>
+          <p>Orientation and integrity training for recently minted members who have transitioned through the HR review process.</p>
         </div>
       </div>
     </section>
@@ -175,22 +201,22 @@
       </div>
 
       <div class="card form-card">
-        <div id="app-alert" class="alert hidden"></div>
+        <div id="app-alert" class="alert hidden" role="status" aria-live="polite"></div>
 
         <form id="volunteer-form" onsubmit="handleVolunteerSubmit(event)">
           <div class="form-group">
             <label for="fullName" data-i18n="label_name">Full Name</label>
-            <input type="text" id="fullName" required placeholder="e.g. Muhammad Haris">
+            <input type="text" id="fullName" name="name" autocomplete="name" required placeholder="e.g. Muhammad Haris">
           </div>
 
           <div class="form-row">
             <div class="form-group">
               <label for="email" data-i18n="label_email">Email Address</label>
-              <input type="email" id="email" required placeholder="name@example.com">
+              <input type="email" id="email" name="email" autocomplete="email" required placeholder="name@example.com">
             </div>
             <div class="form-group">
               <label for="phone" data-i18n="label_phone">Phone Number</label>
-              <input type="tel" id="phone" required placeholder="+92 300 1234567">
+              <input type="tel" id="phone" name="phone" autocomplete="tel" required placeholder="+92 300 1234567">
             </div>
           </div>
 
@@ -227,18 +253,18 @@
         </div>
         <div class="card">
           <h3>Send Direct Message</h3>
-          <form onsubmit="event.preventDefault(); alert('Message dispatched to Central Secretariat.'); event.target.reset();">
+          <form id="contact-form" onsubmit="handleContactSubmit(event)">
             <div class="form-group">
-              <label>Your Name</label>
-              <input type="text" required placeholder="Full Name">
+              <label for="contact-name">Your Name</label>
+              <input type="text" id="contact-name" autocomplete="name" required placeholder="Full Name">
             </div>
             <div class="form-group">
-              <label>Email Address</label>
-              <input type="email" required placeholder="name@example.com">
+              <label for="contact-email">Email Address</label>
+              <input type="email" id="contact-email" autocomplete="email" required placeholder="name@example.com">
             </div>
             <div class="form-group">
-              <label>Message</label>
-              <textarea rows="3" required placeholder="Inquiry or operational query..."></textarea>
+              <label for="contact-message">Message</label>
+              <textarea id="contact-message" rows="3" required placeholder="Inquiry or operational query..."></textarea>
             </div>
             <button type="submit" class="btn btn-primary">Transmit Message</button>
           </form>
@@ -249,20 +275,37 @@
     <!-- AUTHENTICATION VIEW -->
     <section id="login-view" class="view hidden">
       <div class="card form-card login-card">
-        <h2 data-i18n="login_title">Staff & Officer Authentication</h2>
-        <p class="subtitle" data-i18n="login_subtitle">Enter credentials to access role-authorized operational pipelines.</p>
+        <div class="auth-head">
+          <div class="logo-icon" aria-hidden="true">⚓</div>
+          <h2 data-i18n="login_title">Staff & Officer Authentication</h2>
+          <p class="subtitle" data-i18n="login_subtitle">Enter credentials to access role-authorized operational pipelines.</p>
+        </div>
 
-        <div id="login-alert" class="alert hidden"></div>
+        <div id="login-alert" class="alert hidden" role="alert"></div>
+
+        <!-- Shown while credentials are being verified -->
+        <div id="login-status" class="auth-status hidden" role="status" aria-live="polite">
+          <span class="spinner" aria-hidden="true"></span>
+          <div>
+            <strong id="login-status-title">Authenticating…</strong>
+            <span class="sub" id="login-status-sub">Verifying your credentials securely</span>
+          </div>
+        </div>
 
         <form id="login-form" onsubmit="handleLogin(event)">
           <div class="form-group">
             <label for="login-email" data-i18n="label_email">Corporate Email</label>
-            <input type="email" id="login-email" required placeholder="officer@shiplens.org">
+            <input type="email" id="login-email" autocomplete="username" required placeholder="officer@shiplens.org">
           </div>
 
           <div class="form-group">
             <label for="login-password" data-i18n="label_password">Password</label>
-            <input type="password" id="login-password" required placeholder="••••••••">
+            <div class="input-wrap">
+              <input type="password" id="login-password" autocomplete="current-password" required placeholder="••••••••">
+              <button type="button" class="pw-toggle" data-toggle-password="login-password" aria-label="Show password">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
           </div>
 
           <button type="submit" class="btn btn-primary btn-block" data-i18n="btn_login">Authenticate</button>
@@ -335,7 +378,9 @@
               </tr>
             </thead>
             <tbody>
-              <tr><td colspan="4" class="text-center">Loading reports...</td></tr>
+              <tr class="skeleton-row" aria-hidden="true"><td colspan="4"><span class="skeleton skeleton-line"></span></td></tr>
+              <tr class="skeleton-row" aria-hidden="true"><td colspan="4"><span class="skeleton skeleton-line"></span></td></tr>
+              <tr class="skeleton-row" aria-hidden="true"><td colspan="4"><span class="skeleton skeleton-line"></span></td></tr>
             </tbody>
           </table>
         </div>
@@ -365,7 +410,9 @@
               </tr>
             </thead>
             <tbody>
-              <tr><td colspan="5" class="text-center">Loading applications...</td></tr>
+              <tr class="skeleton-row" aria-hidden="true"><td colspan="5"><span class="skeleton skeleton-line"></span></td></tr>
+              <tr class="skeleton-row" aria-hidden="true"><td colspan="5"><span class="skeleton skeleton-line"></span></td></tr>
+              <tr class="skeleton-row" aria-hidden="true"><td colspan="5"><span class="skeleton skeleton-line"></span></td></tr>
             </tbody>
           </table>
         </div>
@@ -385,7 +432,9 @@
               </tr>
             </thead>
             <tbody>
-              <tr><td colspan="5" class="text-center">Loading roster...</td></tr>
+              <tr class="skeleton-row" aria-hidden="true"><td colspan="5"><span class="skeleton skeleton-line"></span></td></tr>
+              <tr class="skeleton-row" aria-hidden="true"><td colspan="5"><span class="skeleton skeleton-line"></span></td></tr>
+              <tr class="skeleton-row" aria-hidden="true"><td colspan="5"><span class="skeleton skeleton-line"></span></td></tr>
             </tbody>
           </table>
         </div>
@@ -402,9 +451,9 @@
       </div>
 
       <div class="card">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="card-head">
           <h3>Pending Reports for Executive Review</h3>
-          <button class="btn btn-secondary" onclick="exportReportsCsv()">Export Reports (CSV)</button>
+          <button type="button" class="btn btn-secondary" onclick="exportReportsCsv()">Export Reports (CSV)</button>
         </div>
         <div class="table-responsive mt-4">
           <table class="data-table" id="finance-reports-table">
@@ -418,7 +467,9 @@
               </tr>
             </thead>
             <tbody>
-              <tr><td colspan="5" class="text-center">Loading submitted reports...</td></tr>
+              <tr class="skeleton-row" aria-hidden="true"><td colspan="5"><span class="skeleton skeleton-line"></span></td></tr>
+              <tr class="skeleton-row" aria-hidden="true"><td colspan="5"><span class="skeleton skeleton-line"></span></td></tr>
+              <tr class="skeleton-row" aria-hidden="true"><td colspan="5"><span class="skeleton skeleton-line"></span></td></tr>
             </tbody>
           </table>
         </div>
@@ -472,9 +523,9 @@
 
         <!-- Published & Draft Articles Table -->
         <div class="card">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div class="card-head">
             <h3>All Articles & Bulletins</h3>
-            <button class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;" onclick="loadEditorContentList()">Refresh</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="loadEditorContentList()">Refresh</button>
           </div>
           <div class="table-responsive mt-4">
             <table class="data-table" id="editor-content-table">
@@ -487,7 +538,9 @@
                 </tr>
               </thead>
               <tbody>
-                <tr><td colspan="4" class="text-center">Loading articles...</td></tr>
+                <tr class="skeleton-row" aria-hidden="true"><td colspan="4"><span class="skeleton skeleton-line"></span></td></tr>
+                <tr class="skeleton-row" aria-hidden="true"><td colspan="4"><span class="skeleton skeleton-line"></span></td></tr>
+                <tr class="skeleton-row" aria-hidden="true"><td colspan="4"><span class="skeleton skeleton-line"></span></td></tr>
               </tbody>
             </table>
           </div>
@@ -500,6 +553,24 @@
     <p>© 2026 ShipLens Enterprise Platform — Server-side RBAC & Financial Auditing</p>
   </footer>
 
+  <!-- In-app error pages (403 / 404 / 500 / offline) -->
+  <div id="error-view" class="error-overlay hidden" role="alertdialog" aria-modal="true" aria-labelledby="error-title" aria-describedby="error-desc">
+    <div class="error-card" id="error-card" data-kind="404">
+      <div class="error-icon" id="error-icon" aria-hidden="true"></div>
+      <div class="error-code" id="error-code">404</div>
+      <h2 class="error-title" id="error-title"></h2>
+      <p class="error-desc" id="error-desc"></p>
+      <div class="error-actions">
+        <button type="button" class="btn btn-primary" id="error-primary"></button>
+        <button type="button" class="btn btn-secondary" id="error-secondary"></button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-root" aria-live="polite"></div>
+
+  <!-- ui.js must load BEFORE app.js so every request is tracked -->
+  <script src="/js/ui.js"></script>
   <script src="/js/app.js"></script>
 </body>
 </html>

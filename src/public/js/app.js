@@ -2,6 +2,7 @@
 let currentLang = 'en';
 let currentUser = null;
 let branches = [];
+let branchesLoaded = false;
 
 const i18n = {
   en: {
@@ -62,6 +63,40 @@ const i18n = {
   }
 };
 
+/* ---------- Helpers ---------- */
+
+// Escape anything coming from the database before putting it in innerHTML (XSS fix)
+function esc(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+// Toast (from ui.js) with a safe fallback
+function notify(type, message, duration) {
+  if (window.ShipLensUI && window.ShipLensUI.toast) window.ShipLensUI.toast(type, message, duration);
+  else alert(message);
+}
+
+const STATUS_CLASS = {
+  APPROVED: 'success', ACCEPTED: 'success', PUBLISHED: 'success', ACTIVE: 'success',
+  SUBMITTED: 'info', FROZEN: 'info', APPLIED: 'info',
+  DRAFT: 'warning', RETURNED: 'danger', DECLINED: 'danger', INACTIVE: 'danger'
+};
+
+function pill(status) {
+  const cls = STATUS_CLASS[status] ? ` status-${STATUS_CLASS[status]}` : '';
+  return `<span class="status-pill${cls}">${esc(status)}</span>`;
+}
+
+function failedRow(cols) {
+  return `<tr><td colspan="${cols}" class="text-center"><div class="empty-state"><span>Couldn’t load this data.</span><button type="button" class="btn btn-outline btn-sm" data-reload>Retry</button></div></td></tr>`;
+}
+
+function emptyRow(cols, text) {
+  return `<tr><td colspan="${cols}" class="text-center">${esc(text)}</td></tr>`;
+}
+
 // Safe JSON parser to guard against HTML responses
 async function safeJson(response) {
   const contentType = response.headers.get('content-type') || '';
@@ -70,6 +105,10 @@ async function safeJson(response) {
   }
   const text = await response.text();
   throw new Error(`Server returned unexpected ${response.status} response (${text.slice(0, 80).trim()}...)`);
+}
+
+function authHeaders(extra = {}) {
+  return { 'Authorization': `Bearer ${localStorage.getItem('shiplens_token')}`, ...extra };
 }
 
 function formatDateDisplay(rawDate) {
@@ -133,34 +172,45 @@ async function fetchBranches() {
     const res = await fetch('/branches');
     if (res.ok) {
       branches = await safeJson(res);
+      branchesLoaded = true;
       const select = document.getElementById('preferredBranch');
       if (select) {
-        select.innerHTML = `<option value="" disabled selected>${i18n[currentLang].opt_select_branch}</option>`;
+        select.innerHTML = `<option value="" disabled selected>${esc(i18n[currentLang].opt_select_branch)}</option>`;
         branches.forEach((b) => {
           const opt = document.createElement('option');
           opt.value = b.id;
-          opt.innerText = `${b.name} (${b.city}) [${b.code}]`;
+          opt.textContent = `${b.name} (${b.city}) [${b.code}]`;
           select.appendChild(opt);
         });
       }
       renderPublicBranchesTable();
+    } else {
+      const tbody = document.querySelector('#public-branches-table tbody');
+      if (tbody) tbody.innerHTML = failedRow(4);
     }
   } catch (e) {
     console.error('Error loading branches:', e);
+    const tbody = document.querySelector('#public-branches-table tbody');
+    if (tbody) tbody.innerHTML = failedRow(4);
   }
 }
 
 // Populate Public Branches Directory Table
 function renderPublicBranchesTable() {
   const tbody = document.querySelector('#public-branches-table tbody');
-  if (!tbody || branches.length === 0) return;
+  if (!tbody || !branchesLoaded) return; // keep skeleton until data arrives
+
+  if (branches.length === 0) {
+    tbody.innerHTML = emptyRow(4, 'No branches listed yet.');
+    return;
+  }
 
   tbody.innerHTML = branches.map((b) => `
     <tr>
-      <td><strong>${b.code}</strong></td>
-      <td>${b.name}</td>
-      <td>${b.city}</td>
-      <td><span class="role-badge" style="background:#059669; color:#fff;">ACTIVE</span></td>
+      <td><strong>${esc(b.code)}</strong></td>
+      <td>${esc(b.name)}</td>
+      <td>${esc(b.city)}</td>
+      <td><span class="status-pill status-success">ACTIVE</span></td>
     </tr>
   `).join('');
 }
@@ -176,22 +226,25 @@ async function loadHomeBulletins() {
     });
     if (res.ok) {
       const items = await safeJson(res);
+      container.removeAttribute('aria-busy');
       if (items.length === 0) {
-        container.innerHTML = '<p style="color: #64748b; font-style: italic;">No public bulletins published at this time.</p>';
+        container.innerHTML = '<p class="subtitle">No public bulletins published at this time.</p>';
         return;
       }
       container.innerHTML = items.map((item) => `
-        <div style="border-bottom: 1px solid #e2e8f0; padding: 0.75rem 0;">
-          <div style="display: flex; justify-content: space-between; align-items: baseline;">
-            <h4 style="margin: 0; color: #0f172a;">${item.title}</h4>
-            <small style="color: #64748b;">${new Date(item.published_at || item.created_at).toLocaleDateString()}</small>
+        <article class="bulletin">
+          <div class="bulletin-head">
+            <h4>${esc(item.title)}</h4>
+            <small>${esc(new Date(item.published_at || item.created_at).toLocaleDateString())}</small>
           </div>
-          <p style="margin: 0.25rem 0 0 0; color: #475569; font-size: 0.95rem;">${item.summary || item.body.slice(0, 160)}...</p>
-        </div>
+          <p>${esc(item.summary || (item.body || '').slice(0, 160) + '...')}</p>
+        </article>
       `).join('');
+    } else {
+      container.innerHTML = '<p class="subtitle">Unable to load public bulletins right now.</p>';
     }
   } catch (err) {
-    container.innerHTML = '<p style="color: #ef4444;">Unable to load public bulletins.</p>';
+    container.innerHTML = '<p class="subtitle">Unable to load public bulletins right now.</p>';
   }
 }
 
@@ -219,10 +272,11 @@ async function handleVolunteerSubmit(event) {
     const data = await safeJson(res);
 
     if (res.ok) {
-      alertEl.innerText = currentLang === 'ur' 
+      alertEl.innerText = currentLang === 'ur'
         ? 'آپ کی درخواست کامیابی سے جمع ہو گئی ہے۔ برانچ انتظامیہ جلد رابطہ کرے گی۔'
         : 'Application submitted successfully! Our regional HR lead will review your submission.';
       alertEl.className = 'alert alert-success';
+      alertEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
       document.getElementById('volunteer-form').reset();
     } else {
       throw new Error(data.error || 'Failed to submit application');
@@ -230,6 +284,7 @@ async function handleVolunteerSubmit(event) {
   } catch (err) {
     alertEl.innerText = err.message;
     alertEl.className = 'alert alert-error';
+    alertEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 }
 
@@ -254,7 +309,9 @@ async function handleLogin(event) {
     if (res.ok) {
       currentUser = data.user;
       localStorage.setItem('shiplens_token', data.token);
+      document.getElementById('login-form').reset();
       renderAuthenticatedState();
+      notify('success', `Signed in as ${currentUser.email}`);
     } else {
       throw new Error(data.message || data.error || 'Invalid credentials');
     }
@@ -299,79 +356,76 @@ function logout() {
   document.getElementById('user-profile').classList.add('hidden');
   document.getElementById('auth-buttons').classList.remove('hidden');
   navigateTo('home');
+  notify('info', 'You have been signed out.');
 }
 
 // HR Actions: Load Applications, Review & Accept
 async function loadHRRoster() {
-  const token = localStorage.getItem('shiplens_token');
-
   const appsTbody = document.querySelector('#hr-applications-table tbody');
   if (appsTbody) {
     try {
-      const appsRes = await fetch('/applications?status=APPLIED', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const appsRes = await fetch('/applications?status=APPLIED', { headers: authHeaders() });
       if (appsRes.ok) {
         const applications = await safeJson(appsRes);
         if (applications.length === 0) {
-          appsTbody.innerHTML = '<tr><td colspan="5" class="text-center">No pending applications in queue.</td></tr>';
+          appsTbody.innerHTML = emptyRow(5, 'No pending applications in queue.');
         } else {
           appsTbody.innerHTML = applications.map((a) => `
             <tr>
-              <td><strong>${a.full_name}</strong></td>
-              <td>${a.email}</td>
-              <td>${a.phone}</td>
-              <td>${a.preferred_branch_name || 'Unassigned'}</td>
+              <td><strong>${esc(a.full_name)}</strong></td>
+              <td>${esc(a.email)}</td>
+              <td>${esc(a.phone)}</td>
+              <td>${esc(a.preferred_branch_name || 'Unassigned')}</td>
               <td>
-                <button class="btn btn-primary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="reviewApplication('${a.id}', 'ACCEPTED', '${a.preferred_branch_id || ''}')">Accept & Mint</button>
-                <button class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="reviewApplication('${a.id}', 'DECLINED')">Decline</button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="reviewApplication('${esc(a.id)}', 'ACCEPTED', '${esc(a.preferred_branch_id || '')}')">Accept & Mint</button>
+                <button type="button" class="btn btn-outline btn-sm" onclick="reviewApplication('${esc(a.id)}', 'DECLINED')">Decline</button>
               </td>
             </tr>
           `).join('');
         }
+      } else if (appsRes.status !== 403) {
+        appsTbody.innerHTML = failedRow(5);
       }
     } catch (err) {
       console.error('Failed to load applications:', err);
+      appsTbody.innerHTML = failedRow(5);
     }
   }
 
   const rosterTbody = document.querySelector('#hr-roster-table tbody');
   if (rosterTbody) {
     try {
-      const membersRes = await fetch('/members', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const membersRes = await fetch('/members', { headers: authHeaders() });
       if (membersRes.ok) {
         const members = await safeJson(membersRes);
         if (members.length === 0) {
-          rosterTbody.innerHTML = '<tr><td colspan="5" class="text-center">No active members in roster.</td></tr>';
+          rosterTbody.innerHTML = emptyRow(5, 'No active members in roster.');
         } else {
           rosterTbody.innerHTML = members.map((m) => `
             <tr>
-              <td><strong>${m.member_code}</strong></td>
-              <td>${m.full_name}</td>
-              <td>${m.branch_name || 'Assigned Branch'}</td>
-              <td>${m.email} (${m.phone})</td>
-              <td><span class="role-badge">${m.status}</span></td>
+              <td><strong>${esc(m.member_code)}</strong></td>
+              <td>${esc(m.full_name)}</td>
+              <td>${esc(m.branch_name || 'Assigned Branch')}</td>
+              <td>${esc(m.email)} (${esc(m.phone)})</td>
+              <td>${pill(m.status)}</td>
             </tr>
           `).join('');
         }
+      } else if (membersRes.status !== 403) {
+        rosterTbody.innerHTML = failedRow(5);
       }
     } catch (err) {
       console.error('Failed to load members:', err);
+      rosterTbody.innerHTML = failedRow(5);
     }
   }
 }
 
 async function reviewApplication(applicationId, status, preferredBranchId) {
-  const token = localStorage.getItem('shiplens_token');
   try {
     const res = await fetch(`/applications/${applicationId}/review`, {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         status,
         assignedBranchId: preferredBranchId || undefined
@@ -381,16 +435,16 @@ async function reviewApplication(applicationId, status, preferredBranchId) {
     const data = await safeJson(res);
     if (res.ok) {
       if (status === 'ACCEPTED') {
-        alert(`Volunteer accepted! Atomic Member Code minted: ${data.member.member_code}`);
+        notify('success', `Volunteer accepted! Member code minted: ${data.member.member_code}`, 7000);
       } else {
-        alert('Application marked as DECLINED.');
+        notify('info', 'Application marked as declined.');
       }
       loadHRRoster();
     } else {
-      alert(`Error: ${data.error || 'Review operation failed'}`);
+      notify('error', data.error || 'Review operation failed');
     }
   } catch (err) {
-    alert(`Network Error: ${err.message}`);
+    notify('error', err.message);
   }
 }
 
@@ -400,14 +454,12 @@ async function handleRecordCollection(event) {
   const amountPkr = parseInt(document.getElementById('col-amount-pkr').value, 10);
   const amountPaisa = amountPkr * 100;
   const collectionDate = document.getElementById('col-date').value;
+  const form = event.target;
 
   try {
     const res = await fetch('/collections', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('shiplens_token')}`
-      },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         branchId: currentUser.branchId,
         amountPaisa,
@@ -417,13 +469,13 @@ async function handleRecordCollection(event) {
 
     const data = await safeJson(res);
     if (res.ok) {
-      alert(`Collection of PKR ${amountPkr.toLocaleString()} committed to Paisa ledger (${amountPaisa} paisa).`);
-      event.target.reset();
+      notify('success', `Collection of PKR ${amountPkr.toLocaleString()} committed to the ledger.`);
+      form.reset();
     } else {
-      alert(`Error: ${data.error}`);
+      notify('error', data.error || 'Could not record collection');
     }
   } catch (err) {
-    alert(`Error: ${err.message}`);
+    notify('error', err.message);
   }
 }
 
@@ -431,19 +483,17 @@ async function handleCreateReport(event) {
   event.preventDefault();
   const startDate = document.getElementById('rep-start').value;
   const endDate = document.getElementById('rep-end').value;
+  const form = event.target;
 
   if (new Date(endDate) < new Date(startDate)) {
-    alert('Validation Error: Week End Date cannot be earlier than Week Start Date.');
+    notify('error', 'Week End Date cannot be earlier than Week Start Date.');
     return;
   }
 
   try {
     const res = await fetch('/reports', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('shiplens_token')}`
-      },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         branchId: currentUser.branchId,
         weekStartDate: startDate,
@@ -454,14 +504,14 @@ async function handleCreateReport(event) {
 
     const data = await safeJson(res);
     if (res.ok) {
-      alert('Draft weekly report generated from collections.');
+      notify('success', 'Draft weekly report generated from collections.');
       loadBranchLeadReports();
-      event.target.reset();
+      form.reset();
     } else {
-      alert(`Error: ${data.error}`);
+      notify('error', data.error || 'Could not create report');
     }
   } catch (err) {
-    alert(`Error: ${err.message}`);
+    notify('error', err.message);
   }
 }
 
@@ -470,30 +520,31 @@ async function loadBranchLeadReports() {
   if (!tbody) return;
 
   try {
-    const res = await fetch('/reports', {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('shiplens_token')}` }
-    });
+    const res = await fetch('/reports', { headers: authHeaders() });
     if (res.ok) {
       const reports = await safeJson(res);
       if (reports.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center">No reports drafted yet.</td></tr>';
+        tbody.innerHTML = emptyRow(4, 'No reports drafted yet.');
         return;
       }
       tbody.innerHTML = reports.map((r) => `
         <tr>
-          <td>${formatDateDisplay(r.week_start_date)} to ${formatDateDisplay(r.week_end_date)}</td>
+          <td>${esc(formatDateDisplay(r.week_start_date))} to ${esc(formatDateDisplay(r.week_end_date))}</td>
           <td>PKR ${(Number(r.total_amount_paisa) / 100).toLocaleString()}</td>
-          <td><span class="role-badge">${r.status}</span></td>
+          <td>${pill(r.status)}</td>
           <td>
-            ${r.status === 'DRAFT' || r.status === 'RETURNED' 
-              ? `<button class="btn btn-primary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="submitReport('${r.id}')">Submit to HQ</button>` 
-              : '<span style="color: #64748b; font-size: 0.85rem;">Locked / Under Review</span>'}
+            ${r.status === 'DRAFT' || r.status === 'RETURNED'
+              ? `<button type="button" class="btn btn-primary btn-sm" onclick="submitReport('${esc(r.id)}')">Submit to HQ</button>`
+              : '<span class="subtitle" style="margin:0">Locked / Under Review</span>'}
           </td>
         </tr>
       `).join('');
+    } else if (res.status !== 403) {
+      tbody.innerHTML = failedRow(4);
     }
   } catch (err) {
     console.error('Failed to load reports:', err);
+    tbody.innerHTML = failedRow(4);
   }
 }
 
@@ -501,17 +552,17 @@ async function submitReport(id) {
   try {
     const res = await fetch(`/reports/${id}/submit`, {
       method: 'PATCH',
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('shiplens_token')}` }
+      headers: authHeaders()
     });
     const data = await safeJson(res);
     if (res.ok) {
-      alert('Report submitted for central review.');
+      notify('success', 'Report submitted for central review.');
       loadBranchLeadReports();
     } else {
-      alert(`Submission error: ${data.error}`);
+      notify('error', data.error || 'Submission failed');
     }
   } catch (err) {
-    alert(`Error: ${err.message}`);
+    notify('error', err.message);
   }
 }
 
@@ -521,30 +572,31 @@ async function loadFinanceQueue() {
   if (!tbody) return;
 
   try {
-    const res = await fetch('/reports?status=SUBMITTED', {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('shiplens_token')}` }
-    });
+    const res = await fetch('/reports?status=SUBMITTED', { headers: authHeaders() });
     if (res.ok) {
       const reports = await safeJson(res);
       if (reports.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center">No reports currently awaiting review.</td></tr>';
+        tbody.innerHTML = emptyRow(5, 'No reports currently awaiting review.');
         return;
       }
       tbody.innerHTML = reports.map((r) => `
         <tr>
-          <td><code>${r.id.slice(0, 8)}...</code></td>
-          <td>${formatDateDisplay(r.week_start_date)} to ${formatDateDisplay(r.week_end_date)}</td>
+          <td><code>${esc(String(r.id).slice(0, 8))}...</code></td>
+          <td>${esc(formatDateDisplay(r.week_start_date))} to ${esc(formatDateDisplay(r.week_end_date))}</td>
           <td>PKR ${(Number(r.total_amount_paisa) / 100).toLocaleString()}</td>
-          <td><span class="role-badge">${r.status}</span></td>
+          <td>${pill(r.status)}</td>
           <td>
-            <button class="btn btn-primary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="approveReport('${r.id}')">Approve & Freeze</button>
-            <button class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="returnReport('${r.id}')">Return</button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="approveReport('${esc(r.id)}')">Approve & Freeze</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="returnReport('${esc(r.id)}')">Return</button>
           </td>
         </tr>
       `).join('');
+    } else if (res.status !== 403) {
+      tbody.innerHTML = failedRow(5);
     }
   } catch (err) {
     console.error('Failed to load finance queue:', err);
+    tbody.innerHTML = failedRow(5);
   }
 }
 
@@ -552,17 +604,17 @@ async function approveReport(id) {
   try {
     const res = await fetch(`/reports/${id}/approve`, {
       method: 'PATCH',
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('shiplens_token')}` }
+      headers: authHeaders()
     });
     const data = await safeJson(res);
     if (res.ok) {
-      alert('Report approved. Weekly collections locked and frozen metrics snapshot generated.');
+      notify('success', 'Report approved. Collections locked and metrics snapshot frozen.', 6000);
       loadFinanceQueue();
     } else {
-      alert(`Approval error: ${data.error}`);
+      notify('error', data.error || 'Approval failed');
     }
   } catch (err) {
-    alert(`Error: ${err.message}`);
+    notify('error', err.message);
   }
 }
 
@@ -573,67 +625,59 @@ async function returnReport(id) {
   try {
     const res = await fetch(`/reports/${id}/return`, {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('shiplens_token')}`
-      },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ rejectionReason: reason })
     });
 
     const data = await safeJson(res);
     if (res.ok) {
-      alert('Report returned to branch lead.');
+      notify('info', 'Report returned to branch lead.');
       loadFinanceQueue();
     } else {
-      alert(`Error: ${data.error}`);
+      notify('error', data.error || 'Could not return report');
     }
   } catch (err) {
-    alert(`Error: ${err.message}`);
+    notify('error', err.message);
   }
 }
 
 // Content Editor Actions
 async function loadEditorContentList() {
-  const token = localStorage.getItem('shiplens_token');
   const tbody = document.querySelector('#editor-content-table tbody');
   if (!tbody) return;
 
   try {
-    const res = await fetch('/admin/content', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
+    const res = await fetch('/admin/content', { headers: authHeaders() });
     if (res.ok) {
       const items = await safeJson(res);
       if (items.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center">No content items created yet.</td></tr>';
+        tbody.innerHTML = emptyRow(4, 'No content items created yet.');
         return;
       }
       tbody.innerHTML = items.map((item) => `
         <tr>
-          <td><strong>${item.title}</strong></td>
-          <td><span class="role-badge">${item.category}</span></td>
+          <td><strong>${esc(item.title)}</strong></td>
+          <td><span class="role-badge">${esc(item.category)}</span></td>
+          <td>${pill(item.status)}</td>
           <td>
-            <span class="role-badge" style="background:${item.status === 'PUBLISHED' ? '#dcfce7' : '#fef3c7'}; color:${item.status === 'PUBLISHED' ? '#15803d' : '#b45309'};">
-              ${item.status}
-            </span>
-          </td>
-          <td>
-            ${item.status === 'DRAFT' 
-              ? `<button class="btn btn-primary" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;" onclick="publishContentItem('${item.id}')">Publish</button>`
-              : `<button class="btn btn-outline" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;" onclick="unpublishContentItem('${item.id}')">Unpublish</button>`
+            ${item.status === 'DRAFT'
+              ? `<button type="button" class="btn btn-primary btn-sm" onclick="publishContentItem('${esc(item.id)}')">Publish</button>`
+              : `<button type="button" class="btn btn-outline btn-sm" onclick="unpublishContentItem('${esc(item.id)}')">Unpublish</button>`
             }
           </td>
         </tr>
       `).join('');
+    } else if (res.status !== 403) {
+      tbody.innerHTML = failedRow(4);
     }
   } catch (err) {
     console.error('Failed to load editor content:', err);
+    tbody.innerHTML = failedRow(4);
   }
 }
 
 async function handleCreateContent(event) {
   event.preventDefault();
-  const token = localStorage.getItem('shiplens_token');
 
   const title = document.getElementById('post-title').value;
   const category = document.getElementById('post-category').value;
@@ -643,84 +687,78 @@ async function handleCreateContent(event) {
   try {
     const res = await fetch('/admin/content', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ title, category, summary, body })
     });
 
     const data = await safeJson(res);
     if (res.ok) {
-      alert('Draft bulletin saved successfully.');
+      notify('success', 'Draft bulletin saved.');
       document.getElementById('editor-form').reset();
       loadEditorContentList();
     } else {
-      alert(`Error: ${data.error || 'Failed to save draft'}`);
+      notify('error', data.error || 'Failed to save draft');
     }
   } catch (err) {
-    alert(`Error: ${err.message}`);
+    notify('error', err.message);
   }
 }
 
 async function publishContentItem(id) {
-  const token = localStorage.getItem('shiplens_token');
   try {
     const res = await fetch(`/admin/content/${id}/publish`, {
       method: 'PATCH',
-      headers: { 'Authorization': `Bearer ${token}` }
+      headers: authHeaders()
     });
     const data = await safeJson(res);
     if (res.ok) {
-      alert('Bulletin published to the public portal!');
+      notify('success', 'Bulletin published to the public portal.');
       loadEditorContentList();
     } else {
-      alert(`Error: ${data.error || 'Publish failed'}`);
+      notify('error', data.error || 'Publish failed');
     }
   } catch (err) {
-    alert(`Error: ${err.message}`);
+    notify('error', err.message);
   }
 }
 
 async function unpublishContentItem(id) {
-  const token = localStorage.getItem('shiplens_token');
   try {
     const res = await fetch(`/admin/content/${id}/unpublish`, {
       method: 'PATCH',
-      headers: { 'Authorization': `Bearer ${token}` }
+      headers: authHeaders()
     });
     const data = await safeJson(res);
     if (res.ok) {
-      alert('Bulletin reverted to draft.');
+      notify('info', 'Bulletin reverted to draft.');
       loadEditorContentList();
     } else {
-      alert(`Error: ${data.error || 'Unpublish failed'}`);
+      notify('error', data.error || 'Unpublish failed');
     }
   } catch (err) {
-    alert(`Error: ${err.message}`);
+    notify('error', err.message);
   }
 }
 
 // Download formula-sanitized reports CSV
 function exportReportsCsv() {
-  const token = localStorage.getItem('shiplens_token');
-  fetch('/reports/export/csv', {
-    headers: { 'Authorization': `Bearer ${token}` }
-  })
-  .then((res) => {
-    if (!res.ok) throw new Error('Failed to generate CSV export');
-    return res.blob();
-  })
-  .then((blob) => {
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `shiplens-reports-${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  })
-  .catch((err) => alert(err.message));
+  fetch('/reports/export/csv', { headers: authHeaders() })
+    .then((res) => {
+      if (!res.ok) throw new Error('Failed to generate CSV export');
+      return res.blob();
+    })
+    .then((blob) => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `shiplens-reports-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      notify('success', 'CSV export downloaded.');
+    })
+    .catch((err) => notify('error', err.message));
 }
 
 // Initial bootstrap
@@ -756,8 +794,14 @@ window.addEventListener('DOMContentLoaded', () => {
   if (token) {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
-      currentUser = payload;
-      renderAuthenticatedState();
+      // Drop expired tokens instead of showing a dashboard that will 401
+      if (payload.exp && payload.exp * 1000 < Date.now()) {
+        localStorage.removeItem('shiplens_token');
+        notify('warning', 'Your session has expired. Please sign in again.');
+      } else {
+        currentUser = payload;
+        renderAuthenticatedState();
+      }
     } catch {
       localStorage.removeItem('shiplens_token');
     }

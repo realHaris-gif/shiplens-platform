@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#7c3aed">
+  <title>ShipLens — Error</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <main class="error-page">
+    <div class="error-card" id="card" data-kind="404">
+      <div class="error-icon" id="icon" aria-hidden="true"></div>
+      <div class="error-code" id="code">404</div>
+      <h1 class="error-title" id="title"></h1>
+      <p class="error-desc" id="desc"></p>
+      <div class="error-actions">
+        <a class="btn btn-primary" id="primary" href="/"></a>
+        <button type="button" class="btn btn-secondary" id="lang">اردو</button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    /* Which error? ?code=403 → HTTP status of this response → path (/403) → 404 */
+    const MSG = {
+      en: { home: 'Go to home', retry: 'Try again',
+        403: ['Access denied', 'You don’t have permission to view this page. If you think this is a mistake, contact your administrator.'],
+        404: ['Page not found', 'The page you’re looking for doesn’t exist or has been moved.'],
+        500: ['Something went wrong', 'Our servers hit an unexpected problem. Please try again in a moment.'],
+        offline: ['You’re offline', 'Check your internet connection and try again.'] },
+      ur: { home: 'ہوم پر جائیں', retry: 'دوبارہ کوشش کریں',
+        403: ['رسائی ممنوع', 'آپ کو یہ صفحہ دیکھنے کی اجازت نہیں ہے۔ اگر آپ کو لگتا ہے کہ یہ غلطی ہے تو اپنے منتظم سے رابطہ کریں۔'],
+        404: ['صفحہ نہیں ملا', 'جو صفحہ آپ تلاش کر رہے ہیں وہ موجود نہیں یا منتقل ہو چکا ہے۔'],
+        500: ['کچھ غلط ہو گیا', 'ہمارے سرور میں غیر متوقع مسئلہ پیش آیا۔ براہِ کرم کچھ دیر بعد دوبارہ کوشش کریں۔'],
+        offline: ['انٹرنیٹ کنکشن نہیں ہے', 'اپنا انٹرنیٹ کنکشن چیک کریں اور دوبارہ کوشش کریں۔'] }
+    };
+    const ICONS = {
+      403: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="3"/><path d="M8 11V8a4 4 0 0 1 8 0v3M12 15v2"/></svg>',
+      404: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5M9 9l4 4M13 9l-4 4"/></svg>',
+      500: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19L12 3z"/><path d="M12 10v4M12 17.5v.01"/></svg>',
+      offline: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.8a15 15 0 0 1 4.2-2.6M22 8.8a15 15 0 0 0-8.4-3.7M5 12.9a10 10 0 0 1 5.2-2.7M19 12.9a10 10 0 0 0-2.7-1.9M8.5 16.4a5 5 0 0 1 7 0M12 20h.01M3 3l18 18"/></svg>'
+    };
+
+    function detect() {
+      const q = new URLSearchParams(location.search).get('code');
+      if (q && MSG.en[q]) return q;
+      try {
+        const s = performance.getEntriesByType('navigation')[0].responseStatus;
+        if (s === 403) return '403';
+        if (s >= 500) return '500';
+        if (s === 404) return '404';
+      } catch (_) {}
+      const m = location.pathname.match(/(403|404|500|offline)/);
+      if (m) return m[1];
+      return navigator.onLine ? '404' : 'offline';
+    }
+
+    let kind = detect();
+    let lang = new URLSearchParams(location.search).get('lang') === 'ur' ? 'ur' : 'en';
+
+    function render() {
+      const m = MSG[lang];
+      document.documentElement.lang = lang;
+      document.documentElement.dir = lang === 'ur' ? 'rtl' : 'ltr';
+      document.getElementById('card').dataset.kind = kind;
+      document.getElementById('icon').innerHTML = ICONS[kind];
+      document.getElementById('code').textContent = kind === 'offline' ? (lang === 'ur' ? 'آف لائن' : 'Offline') : kind;
+      document.getElementById('title').textContent = m[kind][0];
+      document.getElementById('desc').textContent = m[kind][1];
+      document.getElementById('primary').textContent = (kind === '500' || kind === 'offline') ? m.retry : m.home;
+      document.getElementById('lang').textContent = lang === 'ur' ? 'English' : 'اردو';
+      document.title = 'ShipLens — ' + m[kind][0];
+    }
+
+    document.getElementById('primary').addEventListener('click', (e) => {
+      if (kind === '500' || kind === 'offline') { e.preventDefault(); location.reload(); }
+    });
+    document.getElementById('lang').addEventListener('click', () => { lang = lang === 'ur' ? 'en' : 'ur'; render(); });
+    window.addEventListener('online', () => { if (kind === 'offline') location.reload(); });
+    render();
+  </script>
+</body>
+</html>
