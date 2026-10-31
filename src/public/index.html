@@ -1,30 +1,78 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="en" dir="ltr" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="description" content="ShipLens connects regional branches across Pakistan with centralized financial auditing, immutable logging, and volunteer management.">
-  <meta name="theme-color" content="#7c3aed">
+  <meta name="theme-color" content="#07060d">
+  <meta name="color-scheme" content="dark light">
+  <!-- Apply saved theme before first paint (no flash) -->
+  <script>try{var t=localStorage.getItem("shiplens_theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);if(t==="light")document.querySelector('meta[name="theme-color"]').setAttribute("content","#F8FAFC")}catch(e){}</script>
   <title>ShipLens — Operational & Governance Platform</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E⚓%3C/text%3E%3C/svg%3E">
+  <link rel="icon" href="/image_3.jpg">
 
-  <!-- Fonts first so the stylesheet can use them immediately -->
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@500&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
-  <div id="progress-bar" aria-hidden="true"></div>
-  <div id="net-banner" class="net-banner" role="status" aria-live="polite"><span class="net-dot"></span><span id="net-banner-text">No internet connection</span></div>
 
-  <!-- Header / Nav -->
+  <!-- Shared SVG filter for the liquid loader -->
+  <svg width="0" height="0" style="position:absolute;visibility:hidden" aria-hidden="true" focusable="false">
+    <defs>
+      <filter id="liquid-goo">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur"/>
+        <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7" result="goo"/>
+        <feBlend in="SourceGraphic" in2="goo" />
+      </filter>
+    </defs>
+  </svg>
+
+  <!-- Liquid metaball loader -->
+  <div id="loader" class="loader hidden" role="status" aria-live="polite" aria-busy="true">
+    <svg class="goo" viewBox="-80 -80 160 160" aria-hidden="true">
+      <g filter="url(#liquid-goo)">
+        <circle class="core" r="22"/>
+        <g class="orb" style="--t:3.2s;--d:0s;--a:0deg"><circle cx="0" cy="0" r="10"/></g>
+        <g class="orb" style="--t:3.2s;--d:-.64s;--a:72deg"><circle cx="0" cy="0" r="8"/></g>
+        <g class="orb" style="--t:3.2s;--d:-1.28s;--a:144deg"><circle cx="0" cy="0" r="11"/></g>
+        <g class="orb" style="--t:3.2s;--d:-1.92s;--a:216deg"><circle cx="0" cy="0" r="7"/></g>
+        <g class="orb" style="--t:3.2s;--d:-2.56s;--a:288deg"><circle cx="0" cy="0" r="9"/></g>
+      </g>
+    </svg>
+    <p class="loader-caption" id="loader-caption">Syncing ShipLens Node...</p>
+  </div>
+
+  <!-- Full-screen offline experience -->
+  <div id="offline-screen" class="offline-screen hidden" role="alertdialog" aria-modal="true" aria-labelledby="offline-title" aria-describedby="offline-desc">
+    <div class="offline-card">
+      <svg class="offline-graphic" viewBox="0 0 168 96" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <circle cx="24" cy="58" r="9" fill="currentColor" fill-opacity=".25"/>
+        <path d="M33 58h34"/>
+        <path d="M76 44l-8 28M92 44l-8 28" stroke="#fb7185"/>
+        <path d="M101 58h34" stroke-dasharray="3 6" opacity=".55"/>
+        <circle cx="144" cy="58" r="9" stroke-dasharray="3 4" opacity=".7"/>
+        <circle class="flick" cx="144" cy="58" r="17" stroke-dasharray="2 5"/>
+        <path d="M60 22a34 34 0 0 1 48 0M70 31a20 20 0 0 1 28 0" opacity=".35"/>
+        <circle cx="84" cy="38" r="1.6" fill="currentColor" stroke="none" opacity=".5"/>
+      </svg>
+      <h2 id="offline-title">Connection <em>Interrupted</em></h2>
+      <p id="offline-desc">ShipLens cannot reach the central ledger node. Reconnecting automatically...</p>
+      <button type="button" id="offline-retry" class="btn btn-glass">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4.5V11h-6.5"/></svg>
+        <span id="offline-retry-label">Retry Handshake</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Header / Floating Capsule Nav -->
   <header class="navbar">
-    <div class="nav-brand" onclick="navigateTo('home')">
-      <span class="logo-icon">⚓</span>
+    <div class="nav-brand" onclick="handleBrandClick()">
+      <img src="/image_3.jpg" alt="ShipLens Logo" class="brand-logo" onerror="if(!this.dataset.fb){this.dataset.fb=1;this.src='/logo.png'}else{this.hidden=true}">
       <span class="logo-text">ShipLens</span>
-      <span class="badge" id="env-badge">Production</span>
     </div>
 
     <!-- 7 Mandatory Public Navigation Links -->
@@ -39,8 +87,16 @@
     </nav>
 
     <div class="nav-actions">
+      <button type="button" id="open-portal" class="btn btn-portal hidden" onclick="openPortal()">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.2 2 4.5 13.4h6L9.8 22l8.7-11.4h-6z"/></svg>
+        <span data-i18n="nav_portal">Open Portal</span>
+      </button>
       <button type="button" id="lang-toggle" class="btn btn-secondary" onclick="toggleLanguage()" aria-label="Switch language">
         <span id="lang-label">اردو</span>
+      </button>
+      <button type="button" id="theme-toggle" class="icon-btn" onclick="toggleTheme()" aria-label="Switch to light mode" aria-pressed="false">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7z"/></svg>
       </button>
       <div id="auth-buttons">
         <button type="button" class="btn btn-primary" onclick="showView('login-view')" data-i18n="nav_login">Portal Login</button>
@@ -59,32 +115,32 @@
     <!-- PAGE 1: HOME -->
     <section id="view-home" class="view">
       <div class="hero">
-        <h1 data-i18n="hero_title">Decentralized Governance & Operational Integrity</h1>
+        <h1 data-i18n="hero_title" data-accent-tail="2">Decentralized Governance &amp; <em>Operational Integrity</em></h1>
         <p data-i18n="hero_desc">ShipLens connects regional branches across Pakistan with centralized financial auditing, immutable logging, and volunteer management.</p>
         <div class="hero-actions">
-          <button type="button" class="btn btn-primary" onclick="navigateTo('get-involved')">Join as a Volunteer</button>
-          <button type="button" class="btn btn-outline" onclick="navigateTo('programs')">Explore Programs</button>
+          <button type="button" class="btn btn-primary" onclick="navigateTo('get-involved')" data-i18n="hero_btn_volunteer">Join as a Volunteer</button>
+          <button type="button" class="btn btn-secondary" onclick="navigateTo('programs')" data-i18n="hero_btn_programs">Explore Programs</button>
         </div>
       </div>
 
-      <div class="grid-3 mt-2">
+      <div class="features mt-2">
         <div class="card">
           <div class="feature-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 4.5 3.2 7.8 8 9 4.8-1.2 8-4.5 8-9V6l-8-3z"/><path d="m9 12 2 2 4-4"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 4.5 3.2 7.8 8 9 4.8-1.2 8-4.5 8-9V6l-8-3z"/><path d="m9 12 2 2 4-4"/></svg>
           </div>
-          <h3>Immutable Financial Auditing</h3>
+          <h3>Immutable Financial <em>Auditing</em></h3>
           <p>Integer paisa-precision ledgers, weekly snapshot freezing, and append-only database logs guarantee zero tampering across every regional branch.</p>
         </div>
         <div class="card">
           <div class="feature-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.3 3.2-5.5 6.5-5.5s5.9 2.2 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.8c2 .7 3.2 2.5 3.5 5.2"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.3 3.2-5.5 6.5-5.5s5.9 2.2 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.8c2 .7 3.2 2.5 3.5 5.2"/></svg>
           </div>
           <h3>Volunteer to Member Pipeline</h3>
           <p>Structured intake workflow transforming community applicants into verified operational members with sequential identifier minting.</p>
         </div>
         <div class="card">
           <div class="feature-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/></svg>
           </div>
           <h3>Nationwide Transparency</h3>
           <p>Dual-language Urdu and English support empowering field operatives in Lahore, Karachi, and Islamabad with unified reporting.</p>
@@ -95,7 +151,7 @@
       <div class="card mt-4">
         <h3>Live Organization Bulletins</h3>
         <p class="subtitle">Direct operational updates managed by our Communications Office.</p>
-        <div id="home-bulletins-list" style="margin-top: 1rem;" aria-busy="true">
+        <div id="home-bulletins-list" aria-busy="true">
           <div class="skeleton-block" aria-hidden="true">
             <div class="skeleton-item"><span class="skeleton skeleton-title"></span><span class="skeleton skeleton-line"></span><span class="skeleton skeleton-line"></span></div>
             <div class="skeleton-item"><span class="skeleton skeleton-title"></span><span class="skeleton skeleton-line"></span><span class="skeleton skeleton-line"></span></div>
@@ -108,36 +164,40 @@
     <!-- PAGE 2: ABOUT -->
     <section id="view-about" class="view hidden">
       <div class="hero">
-        <h1>About ShipLens Organization</h1>
+        <h1>About ShipLens <em>Organization</em></h1>
         <p>Building resilient, transparent community infrastructure through technology-driven accountability.</p>
       </div>
-      <div class="card">
-        <h3>Our Mission</h3>
-        <p>ShipLens was founded to eliminate operational friction and financial ambiguity in distributed non-profit networks. By transitioning from vulnerable paper receipts and spreadsheets to cryptographic audit trails, we ensure that every rupee collected in the field directly serves its intended civic purpose.</p>
-        <h3 class="mt-4">Governance Structure</h3>
-        <p>Our organization is structured across semi-autonomous regional branches supervised by an executive Head Office. Regional leads collect dues and run field activities, while centralized Finance Reviewers audit weekly submissions before funds are remitted to main accounts.</p>
+      <div class="card rows">
+        <div class="row">
+          <h3>Our Mission</h3>
+          <p>ShipLens was founded to eliminate operational friction and financial ambiguity in distributed non-profit networks. By transitioning from vulnerable paper receipts and spreadsheets to cryptographic audit trails, we ensure that every rupee collected in the field directly serves its intended civic purpose.</p>
+        </div>
+        <div class="row">
+          <h3>Governance Structure</h3>
+          <p>Our organization is structured across semi-autonomous regional branches supervised by an executive Head Office. Regional leads collect dues and run field activities, while centralized Finance Reviewers audit weekly submissions before funds are remitted to main accounts.</p>
+        </div>
       </div>
     </section>
 
     <!-- PAGE 3: PROGRAMS -->
     <section id="view-programs" class="view hidden">
       <div class="hero">
-        <h1>Active Civic Programs</h1>
+        <h1>Active <em>Civic Programs</em></h1>
         <p>Strategic initiatives deployed across our Pakistani branch network.</p>
       </div>
-      <div class="grid-3">
-        <div class="card">
-          <span class="role-badge" style="margin-bottom: 0.75rem;">Education</span>
+      <div class="card rows programs">
+        <div class="row">
+          <span class="role-badge">Education</span>
           <h3>Community Literacy Circles</h3>
           <p>Weekend tutoring and foundational literacy programs conducted by verified ShipLens members in under-resourced public schools.</p>
         </div>
-        <div class="card">
-          <span class="role-badge" style="margin-bottom: 0.75rem;">Relief</span>
+        <div class="row">
+          <span class="role-badge">Relief</span>
           <h3>Rapid Emergency Logistics</h3>
           <p>Pre-positioned dry rations and basic medicine supply chains managed through localized volunteer chapters during monsoon emergencies.</p>
         </div>
-        <div class="card">
-          <span class="role-badge" style="margin-bottom: 0.75rem;">Youth</span>
+        <div class="row">
+          <span class="role-badge">Youth</span>
           <h3>Technical Skills Bootcamps</h3>
           <p>Vocational training workshops covering basic computing, web literacy, and digital accounting for youth volunteers.</p>
         </div>
@@ -147,7 +207,7 @@
     <!-- PAGE 4: BRANCHES -->
     <section id="view-branches" class="view hidden">
       <div class="hero">
-        <h1>Regional Branch Directory</h1>
+        <h1>Regional <em>Branch Directory</em></h1>
         <p>Active physical headquarters operating across Pakistan.</p>
       </div>
       <div class="card">
@@ -174,20 +234,26 @@
     <!-- PAGE 5: EVENTS -->
     <section id="view-events" class="view hidden">
       <div class="hero">
-        <h1>Upcoming Community Events</h1>
+        <h1>Upcoming <em>Community Events</em></h1>
         <p>Participate in regional summits, volunteer training, and public audits.</p>
       </div>
       <div class="grid-2">
         <div class="card">
           <span class="role-badge">Annual Summit</span>
-          <h3 style="margin-top: 0.75rem;">2026 Nationwide Governance Forum</h3>
-          <p><strong>Date:</strong> November 15, 2026 | <strong>Location:</strong> Islamabad Central Auditorium</p>
+          <h3 class="event-title">2026 Nationwide Governance Forum</h3>
+          <dl class="meta">
+            <dt>Date</dt><dd>November 15, 2026</dd>
+            <dt>Location</dt><dd>Islamabad Central Auditorium</dd>
+          </dl>
           <p>A convene of branch leadership and civil society reviewers reviewing annual transparency reports and field audit results.</p>
         </div>
         <div class="card">
           <span class="role-badge">Field Training</span>
-          <h3 style="margin-top: 0.75rem;">Volunteer Intake & Field Readiness</h3>
-          <p><strong>Date:</strong> Every Saturday | <strong>Location:</strong> Local Branch Offices</p>
+          <h3 class="event-title">Volunteer Intake &amp; Field Readiness</h3>
+          <dl class="meta">
+            <dt>Date</dt><dd>Every Saturday</dd>
+            <dt>Location</dt><dd>Local Branch Offices</dd>
+          </dl>
           <p>Orientation and integrity training for recently minted members who have transitioned through the HR review process.</p>
         </div>
       </div>
@@ -195,61 +261,65 @@
 
     <!-- PAGE 6: GET INVOLVED -->
     <section id="view-get-involved" class="view hidden">
-      <div class="hero">
-        <h1 data-i18n="form_title">Volunteer Application</h1>
-        <p class="subtitle" data-i18n="form_subtitle">Join our nationwide branch network in making an operational impact.</p>
-      </div>
+      <div class="split">
+        <div class="hero">
+          <h1 data-i18n="form_title" data-accent-tail="1">Volunteer <em>Application</em></h1>
+          <p class="subtitle" data-i18n="form_subtitle">Join our nationwide branch network in making an operational impact.</p>
+        </div>
 
-      <div class="card form-card">
-        <div id="app-alert" class="alert hidden" role="status" aria-live="polite"></div>
+        <div class="card form-card">
+          <div id="app-alert" class="alert hidden" role="status" aria-live="polite"></div>
 
-        <form id="volunteer-form" onsubmit="handleVolunteerSubmit(event)">
-          <div class="form-group">
-            <label for="fullName" data-i18n="label_name">Full Name</label>
-            <input type="text" id="fullName" name="name" autocomplete="name" required placeholder="e.g. Muhammad Haris">
-          </div>
-
-          <div class="form-row">
+          <form id="volunteer-form" onsubmit="handleVolunteerSubmit(event)">
             <div class="form-group">
-              <label for="email" data-i18n="label_email">Email Address</label>
-              <input type="email" id="email" name="email" autocomplete="email" required placeholder="name@example.com">
+              <label for="fullName" data-i18n="label_name">Full Name</label>
+              <input type="text" id="fullName" name="name" autocomplete="name" required placeholder="e.g. Muhammad Haris">
             </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="email" data-i18n="label_email">Email Address</label>
+                <input type="email" id="email" name="email" autocomplete="email" required placeholder="name@example.com">
+              </div>
+              <div class="form-group">
+                <label for="phone" data-i18n="label_phone">Phone Number</label>
+                <input type="tel" id="phone" name="phone" autocomplete="tel" required placeholder="+92 300 1234567">
+              </div>
+            </div>
+
             <div class="form-group">
-              <label for="phone" data-i18n="label_phone">Phone Number</label>
-              <input type="tel" id="phone" name="phone" autocomplete="tel" required placeholder="+92 300 1234567">
+              <label for="preferredBranch" data-i18n="label_branch">Preferred Branch</label>
+              <select id="preferredBranch" required>
+                <option value="" disabled selected data-i18n="opt_select_branch">Select your local branch</option>
+              </select>
             </div>
-          </div>
 
-          <div class="form-group">
-            <label for="preferredBranch" data-i18n="label_branch">Preferred Branch</label>
-            <select id="preferredBranch" required>
-              <option value="" disabled selected data-i18n="opt_select_branch">Select your local branch</option>
-            </select>
-          </div>
+            <div class="form-group">
+              <label for="notes" data-i18n="label_notes">Statement of Intent / Skills</label>
+              <textarea id="notes" rows="3" placeholder="Tell us about your background..."></textarea>
+            </div>
 
-          <div class="form-group">
-            <label for="notes" data-i18n="label_notes">Statement of Intent / Skills</label>
-            <textarea id="notes" rows="3" placeholder="Tell us about your background..."></textarea>
-          </div>
-
-          <button type="submit" class="btn btn-primary btn-block" data-i18n="btn_submit_app">Submit Volunteer Application</button>
-        </form>
+            <button type="submit" class="btn btn-primary btn-block" data-i18n="btn_submit_app">Submit Volunteer Application</button>
+          </form>
+        </div>
       </div>
     </section>
 
     <!-- PAGE 7: CONTACT -->
     <section id="view-contact" class="view hidden">
       <div class="hero">
-        <h1>Contact & Head Office</h1>
+        <h1>Contact &amp; <em>Head Office</em></h1>
         <p>Get in touch with central secretariat and audit teams.</p>
       </div>
       <div class="grid-2">
         <div class="card">
           <h3>Central Secretariat</h3>
-          <p><strong>Address:</strong> ShipLens Secretariat, Sector F-7, Blue Area, Islamabad, Pakistan</p>
-          <p><strong>Official Inquiries:</strong> contact@shiplens.org</p>
-          <p><strong>Whistleblower & Audit Desk:</strong> audit@shiplens.org</p>
-          <p><strong>Phone:</strong> +92 (51) 844-SHIP</p>
+          <dl class="meta">
+            <dt>Address</dt><dd>ShipLens Secretariat, Sector F-7, Blue Area, Islamabad, Pakistan</dd>
+            <dt>Official Inquiries</dt><dd>contact@shiplens.org</dd>
+            <dt>Whistleblower &amp; Audit Desk</dt><dd>audit@shiplens.org</dd>
+            <dt>Phone</dt><dd>+92 (51) 844-SHIP</dd>
+          </dl>
         </div>
         <div class="card">
           <h3>Send Direct Message</h3>
@@ -276,14 +346,13 @@
     <section id="login-view" class="view hidden">
       <div class="card form-card login-card">
         <div class="auth-head">
-          <div class="logo-icon" aria-hidden="true">⚓</div>
-          <h2 data-i18n="login_title">Staff & Officer Authentication</h2>
+          <img src="/image_3.jpg" alt="ShipLens Logo" class="brand-logo auth-logo" onerror="if(!this.dataset.fb){this.dataset.fb=1;this.src='/logo.png'}else{this.hidden=true}">
+          <h2 data-i18n="login_title" data-accent-tail="1">Staff &amp; Officer <em>Authentication</em></h2>
           <p class="subtitle" data-i18n="login_subtitle">Enter credentials to access role-authorized operational pipelines.</p>
         </div>
 
         <div id="login-alert" class="alert hidden" role="alert"></div>
 
-        <!-- Shown while credentials are being verified -->
         <div id="login-status" class="auth-status hidden" role="status" aria-live="polite">
           <span class="spinner" aria-hidden="true"></span>
           <div>
@@ -319,10 +388,8 @@
     <!-- Branch Lead Dashboard -->
     <section id="branch-lead-view" class="view hidden">
       <div class="view-header">
-        <div>
-          <h2>Branch Operations Console</h2>
-          <p class="subtitle">Offline Cash Ledger & Weekly Submission Engine</p>
-        </div>
+        <h2>Branch <em>Operations Console</em></h2>
+        <p class="subtitle">Offline Cash Ledger &amp; Weekly Submission Engine</p>
       </div>
 
       <div class="grid-2">
@@ -332,7 +399,7 @@
           <form onsubmit="handleRecordCollection(event)">
             <div class="form-group">
               <label for="col-amount-pkr">Amount (PKR)</label>
-              <input type="number" id="col-amount-pkr" step="1" min="1" required placeholder="5000">
+              <input type="number" id="col-amount-pkr" class="input-amount" step="1" min="1" required placeholder="5000">
             </div>
             <div class="form-group">
               <label for="col-date">Date Collected</label>
@@ -390,10 +457,8 @@
     <!-- HR Lead Dashboard -->
     <section id="hr-lead-view" class="view hidden">
       <div class="view-header">
-        <div>
-          <h2>Human Resources & Member Intake Pipeline</h2>
-          <p class="subtitle">Review volunteer applications and mint atomic member records</p>
-        </div>
+        <h2>Human Resources &amp; <em>Member Intake Pipeline</em></h2>
+        <p class="subtitle">Review volunteer applications and mint atomic member records</p>
       </div>
 
       <div class="card">
@@ -444,10 +509,8 @@
     <!-- Finance Reviewer & Super Admin Dashboard -->
     <section id="finance-view" class="view hidden">
       <div class="view-header">
-        <div>
-          <h2>Central Financial Auditing & Frozen Snapshots</h2>
-          <p class="subtitle">Lock collections, approve weekly reports, and verify immutable audit trail</p>
-        </div>
+        <h2>Central Financial Auditing &amp; <em>Frozen Snapshots</em></h2>
+        <p class="subtitle">Lock collections, approve weekly reports, and verify immutable audit trail</p>
       </div>
 
       <div class="card">
@@ -479,14 +542,11 @@
     <!-- Content Editor Console -->
     <section id="editor-view" class="view hidden">
       <div class="view-header">
-        <div>
-          <h2>Content & Communications Console</h2>
-          <p class="subtitle">Draft, update, and publish official bulletins to the public portal</p>
-        </div>
+        <h2>Content &amp; <em>Communications Console</em></h2>
+        <p class="subtitle">Draft, update, and publish official bulletins to the public portal</p>
       </div>
 
       <div class="grid-2">
-        <!-- Draft Content Form -->
         <div class="card">
           <h3>Create New Bulletin</h3>
           <p class="subtitle">Draft announcements, program updates, or event alerts</p>
@@ -521,10 +581,9 @@
           </form>
         </div>
 
-        <!-- Published & Draft Articles Table -->
         <div class="card">
           <div class="card-head">
-            <h3>All Articles & Bulletins</h3>
+            <h3>All Articles &amp; Bulletins</h3>
             <button type="button" class="btn btn-secondary btn-sm" onclick="loadEditorContentList()">Refresh</button>
           </div>
           <div class="table-responsive mt-4">
@@ -550,10 +609,11 @@
   </main>
 
   <footer class="footer">
-    <p>© 2026 ShipLens Enterprise Platform — Server-side RBAC & Financial Auditing</p>
+    <div class="footer-brand"><img src="/image_3.jpg" alt="ShipLens Logo" class="brand-logo" onerror="if(!this.dataset.fb){this.dataset.fb=1;this.src='/logo.png'}else{this.hidden=true}"><span>ShipLens</span></div>
+    <p>© 2026 ShipLens Enterprise Platform — Server-side RBAC &amp; Financial Auditing</p>
   </footer>
 
-  <!-- In-app error pages (403 / 404 / 500 / offline) -->
+  <!-- In-app error pages -->
   <div id="error-view" class="error-overlay hidden" role="alertdialog" aria-modal="true" aria-labelledby="error-title" aria-describedby="error-desc">
     <div class="error-card" id="error-card" data-kind="404">
       <div class="error-icon" id="error-icon" aria-hidden="true"></div>
@@ -569,7 +629,7 @@
 
   <div id="toast-root" aria-live="polite"></div>
 
-  <!-- ui.js must load BEFORE app.js so every request is tracked -->
+  <!-- Scripts -->
   <script src="/js/ui.js"></script>
   <script src="/js/app.js"></script>
 </body>

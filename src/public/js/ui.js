@@ -2,7 +2,7 @@
    ShipLens — UI layer
    Loads BEFORE app.js. It does not replace anything in app.js; it only
    observes network calls and form submissions to add:
-     • top progress bar + button spinners + "Authenticating…" status
+     • button spinners + "Authenticating…" status
      • success / error toasts for form submissions
      • custom 403 / 404 / 500 / offline pages
      • skeleton fallback ("Couldn't load" + Retry) if data never arrives
@@ -10,12 +10,10 @@
 (() => {
   'use strict';
 
-  /* ---------- Config (edit if your API paths differ) ---------- */
+  /* ---------- Config ---------- */
   const CFG = {
-    authUrl: /(login|signin|sign-in|authenticate)/i,          // login request
-    silentUrl: /(logout|refresh|session|heartbeat|ping)/i,    // no toasts for these
-    // Hashes that are valid page routes. Anything else shows the 404 page,
-    // unless an element with a matching id exists (e.g. #finance -> #finance-view).
+    authUrl: /(login|signin|sign-in|authenticate)/i,
+    silentUrl: /(logout|refresh|session|heartbeat|ping)/i,
     validRoutes: ['', 'home', 'about', 'programs', 'branches', 'events',
                   'get-involved', 'contact', 'login', 'dashboard', 'portal'],
     staleSkeletonMs: 8000
@@ -51,6 +49,18 @@
       goHome: 'Go to home',
       goBack: 'Go back',
       tryAgain: 'Try again',
+      retryConnection: 'Retry connection',
+      offlineTitle: 'Connection Interrupted',
+      offlineDesc: 'ShipLens cannot reach the central ledger node. Reconnecting automatically...',
+      retryHandshake: 'Retry Handshake',
+      fieldRequired: 'This field is required',
+      fieldEmail: 'Enter a valid email address',
+      fieldMin: 'Must be at least {n}',
+      fieldInvalid: 'Check this value',
+      promptTitle: 'Return report to branch lead',
+      promptConfirm: 'Return report',
+      promptCancel: 'Cancel',
+      promptRequired: 'Add a note before returning the report',
       e403: ['Access denied', 'You don’t have permission to view this page. If you think this is a mistake, contact your administrator.'],
       e404: ['Page not found', 'The page you’re looking for doesn’t exist or has been moved.'],
       e500: ['Something went wrong', 'Our servers hit an unexpected problem. Please try again in a moment.'],
@@ -84,6 +94,18 @@
       goHome: 'ہوم پر جائیں',
       goBack: 'واپس جائیں',
       tryAgain: 'دوبارہ کوشش کریں',
+      retryConnection: 'کنکشن دوبارہ آزمائیں',
+      offlineTitle: 'رابطہ منقطع ہو گیا',
+      offlineDesc: 'ShipLens مرکزی لیجر نوڈ تک نہیں پہنچ پا رہا۔ خودکار طور پر دوبارہ جڑ رہا ہے…',
+      retryHandshake: 'دوبارہ رابطہ کریں',
+      fieldRequired: 'یہ خانہ پُر کرنا ضروری ہے',
+      fieldEmail: 'درست ای میل ایڈریس درج کریں',
+      fieldMin: 'کم از کم {n} ہونا چاہیے',
+      fieldInvalid: 'اس قدر کو چیک کریں',
+      promptTitle: 'رپورٹ برانچ لیڈ کو واپس بھیجیں',
+      promptConfirm: 'رپورٹ واپس بھیجیں',
+      promptCancel: 'منسوخ کریں',
+      promptRequired: 'رپورٹ واپس بھیجنے سے پہلے نوٹ لکھیں',
       e403: ['رسائی ممنوع', 'آپ کو یہ صفحہ دیکھنے کی اجازت نہیں ہے۔ اگر آپ کو لگتا ہے کہ یہ غلطی ہے تو اپنے منتظم سے رابطہ کریں۔'],
       e404: ['صفحہ نہیں ملا', 'جو صفحہ آپ تلاش کر رہے ہیں وہ موجود نہیں یا منتقل ہو چکا ہے۔'],
       e500: ['کچھ غلط ہو گیا', 'ہمارے سرور میں غیر متوقع مسئلہ پیش آیا۔ براہِ کرم کچھ دیر بعد دوبارہ کوشش کریں۔'],
@@ -97,10 +119,10 @@
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 
   const ICONS = {
-    success: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>',
-    error: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 6v8M12 18v.01"/></svg>',
-    warning: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 6v8M12 18v.01"/></svg>',
-    info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 11v6M12 7v.01"/></svg>',
+    success: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path class="draw" pathLength="1" d="m6 12.5 4 4 8-9"/></svg>',
+    error: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path class="draw" pathLength="1" d="m7 7 10 10"/><path class="draw d2" pathLength="1" d="M17 7 7 17"/></svg>',
+    warning: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path class="draw" pathLength="1" d="M12 6.5v7"/><path d="M12 17.5v.01"/></svg>',
+    info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path class="draw" pathLength="1" d="M12 11v6"/><path d="M12 7v.01"/></svg>',
     403: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="3"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 15v2"/></svg>',
     404: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5M9 9l4 4M13 9l-4 4"/></svg>',
     500: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19L12 3z"/><path d="M12 10v4M12 17.5v.01"/></svg>',
@@ -115,11 +137,12 @@
     if (!toastRoot || !message) return;
     const key = type + message;
     const now = Date.now();
-    if (recentToasts.get(key) > now - 1500) return; // de-duplicate bursts
+    if (recentToasts.get(key) > now - 1500) return;
     recentToasts.set(key, now);
 
     const el = document.createElement('div');
     el.className = 'toast toast-' + type;
+    el.style.setProperty('--life', duration + 'ms');
     el.setAttribute('role', type === 'error' ? 'alert' : 'status');
     el.innerHTML = '<span class="toast-icon">' + (ICONS[type] || ICONS.info) + '</span>' +
       '<span class="toast-msg"></span>' +
@@ -139,26 +162,32 @@
     timer = setTimeout(close, duration);
   }
 
-  /* ---------- Progress bar + request tracking ---------- */
-  const progress = $('#progress-bar');
+  /* ---------- Loader binding + request tracking ---------- */
+  const LOADER_DELAY = 350;
   let pending = 0;
+  let loaderTimer = null;
+  let loaderCaption;
   const nativeFetch = window.fetch.bind(window);
 
   const updateProgress = () => {
-    if (!progress) return;
+    const L = window.Loader;
+    if (!L) return;
     if (pending > 0) {
-      progress.classList.remove('active');
-      void progress.offsetWidth; // restart animation
-      progress.classList.add('active');
+      if (!L.isShown() && !loaderTimer) {
+        loaderTimer = setTimeout(() => {
+          loaderTimer = null;
+          if (pending > 0 && !currentErr && !offlineOpen()) L.show(loaderCaption);
+        }, LOADER_DELAY);
+      }
     } else {
-      progress.style.transition = 'opacity .4s';
-      progress.classList.remove('active');
+      clearTimeout(loaderTimer);
+      loaderTimer = null;
+      loaderCaption = undefined;
+      L.hide();
     }
   };
 
   function onResponse(res, method, url) {
-    // Success and 4xx validation messages are shown by app.js itself.
-    // This layer only handles cross-cutting failures.
     if (res.ok) return;
     const isAuth = CFG.authUrl.test(url);
     const mutating = method !== 'GET' && method !== 'HEAD';
@@ -183,6 +212,7 @@
   window.fetch = async function (input, init) {
     const method = String((init && init.method) || (input && input.method) || 'GET').toUpperCase();
     const url = typeof input === 'string' ? input : ((input && input.url) || String(input));
+    if (CFG.authUrl.test(url)) loaderCaption = t('authenticating');
     pending++;
     updateProgress();
     try {
@@ -198,21 +228,20 @@
     }
   };
 
-  /* ---------- Form submissions: loading + status ---------- */
+  /* ---------- Safe Non-Destructive Form Loading State ---------- */
   function setLoading(btn, on, text) {
     if (!btn) return;
     if (on) {
-      btn.dataset.uiOrig = btn.textContent;
+      if (!btn.dataset.uiOrig) btn.dataset.uiOrig = btn.innerHTML;
       btn.dataset.uiLoadingText = text;
-      btn.textContent = text;
       btn.classList.add('is-loading');
       btn.setAttribute('aria-busy', 'true');
     } else {
       btn.classList.remove('is-loading');
       btn.removeAttribute('aria-busy');
-      // Restore only if nothing else (e.g. language switch) changed the label meanwhile
-      if (btn.textContent === btn.dataset.uiLoadingText && btn.dataset.uiOrig) {
-        btn.textContent = btn.dataset.uiOrig;
+      if (btn.dataset.uiOrig) {
+        btn.innerHTML = btn.dataset.uiOrig;
+        delete btn.dataset.uiOrig;
       }
     }
   }
@@ -230,10 +259,8 @@
     const btn = e.submitter || form.querySelector('button[type="submit"]');
     if (!btn) return;
 
-    // Block double submits
     if (btn.classList.contains('is-loading')) {
       e.preventDefault();
-      e.stopImmediatePropagation();
       return;
     }
 
@@ -244,7 +271,9 @@
     let sawRequest = false;
     let slowTimer;
 
-    setLoading(btn, true, loadingTextFor(form));
+    setTimeout(() => {
+      setLoading(btn, true, loadingTextFor(form));
+    }, 0);
     form.setAttribute('aria-busy', 'true');
 
     if (isLogin && status) {
@@ -270,15 +299,13 @@
       if (pending > 0) sawRequest = true;
       const elapsed = performance.now() - started;
       const taskRunning = form._uiTask && !form._uiTaskDone;
-      // Keep the spinner visible for at least ~600ms so it never flashes
       if (!taskRunning && pending === 0 && elapsed > 600 && (sawRequest || elapsed > 900)) return finish();
-      if (elapsed > 30000) return finish(); // safety net
+      if (elapsed > 30000) return finish();
       setTimeout(check, 80);
     };
     setTimeout(check, 80);
   }, true);
 
-  /* Contact form: there is no backend endpoint, so simulate the send. */
   window.handleContactSubmit = function (e) {
     e.preventDefault();
     const form = e.target;
@@ -290,7 +317,6 @@
     });
   };
 
-  /* Password show / hide */
   document.addEventListener('click', (e) => {
     const toggle = e.target.closest('[data-toggle-password]');
     if (toggle) {
@@ -332,7 +358,9 @@
   }
 
   function showErrorPage(kind) {
+    if (String(kind) === 'offline') { showOffline(); return; }
     if (!errView) return;
+    if (window.Loader) window.Loader.hide();
     kind = String(kind);
     if (!ICONS[kind]) kind = '500';
     currentErr = kind;
@@ -356,7 +384,7 @@
       primary.textContent = t('tryAgain'); primary.onclick = () => location.reload();
       secondary.textContent = t('goHome'); secondary.onclick = goHome;
     } else {
-      primary.textContent = t('tryAgain'); primary.onclick = retryConnection;
+      primary.textContent = t('retryConnection'); primary.onclick = retryConnection;
       secondary.classList.add('hidden');
     }
 
@@ -376,23 +404,106 @@
     if (e.key === 'Escape' && currentErr && currentErr !== 'offline') hideErrorPage();
   });
 
-  /* ---------- Online / offline ---------- */
-  const banner = $('#net-banner');
-  const bannerText = $('#net-banner-text');
+  /* ---------- Online / offline experience ---------- */
+  const offlineEl = $('#offline-screen');
+  const offlineRetry = $('#offline-retry');
+  const offlineOpen = () => !!offlineEl && !offlineEl.classList.contains('hidden');
 
-  function setOfflineUi(offline) {
-    if (!banner) return;
-    bannerText.textContent = t('offlineBanner');
-    banner.classList.toggle('show', offline);
+  function fillOfflineText() {
+    if (!offlineEl) return;
+    const title = $('#offline-title');
+    const words = t('offlineTitle').split(' ');
+    title.textContent = '';
+    if (isRtl() || words.length < 2) title.textContent = t('offlineTitle');
+    else {
+      title.appendChild(document.createTextNode(words.slice(0, -1).join(' ') + ' '));
+      const em = document.createElement('em');
+      em.textContent = words[words.length - 1];
+      title.appendChild(em);
+    }
+    $('#offline-desc').textContent = t('offlineDesc');
+    $('#offline-retry-label').textContent = t('retryHandshake');
   }
 
-  window.addEventListener('offline', () => setOfflineUi(true));
+  function showOffline() {
+    if (!offlineEl) return;
+    if (window.Loader) window.Loader.hide();
+    if (typeof hideErrorPage === 'function') hideErrorPage();
+    fillOfflineText();
+    offlineEl.classList.remove('hidden');
+    document.body.classList.add('no-scroll');
+    setTimeout(() => offlineRetry && offlineRetry.focus(), 50);
+  }
+
+  function hideOffline() {
+    if (!offlineEl) return;
+    offlineEl.classList.add('hidden');
+    document.body.classList.remove('no-scroll');
+  }
+
+  if (offlineRetry) {
+    offlineRetry.addEventListener('click', async () => {
+      offlineRetry.classList.add('is-retrying');
+      try {
+        await nativeFetch(location.pathname, { method: 'HEAD', cache: 'no-store' });
+        location.reload();
+      } catch (_) {
+        offlineRetry.classList.remove('is-retrying');
+        toast('error', t('stillOffline'));
+      }
+    });
+  }
+
+  window.addEventListener('offline', showOffline);
   window.addEventListener('online', () => {
-    setOfflineUi(false);
+    hideOffline();
     toast('success', t('backOnline'));
-    if (currentErr === 'offline') hideErrorPage();
   });
-  if (!navigator.onLine) setOfflineUi(true);
+  if (!navigator.onLine) showOffline();
+
+  /* ---------- Sliding Pill Under Active Tab (Strict Loop-Proof) ---------- */
+  function placeNavIndicator() {
+    const nav = $('#public-nav');
+    if (!nav) return;
+    let ind = $('.nav-indicator', nav);
+    if (!ind) {
+      ind = document.createElement('span');
+      ind.className = 'nav-indicator';
+      ind.setAttribute('aria-hidden', 'true');
+      nav.prepend(ind);
+    }
+    const active = $('.nav-item.active', nav);
+    if (!active) {
+      if (nav.classList.contains('has-indicator')) nav.classList.remove('has-indicator');
+      return;
+    }
+    if (!nav.classList.contains('has-indicator')) nav.classList.add('has-indicator');
+    ind.style.width = active.offsetWidth + 'px';
+    ind.style.transform = 'translateX(' + active.offsetLeft + 'px)';
+    if (!ind.classList.contains('ready')) requestAnimationFrame(() => ind.classList.add('ready'));
+  }
+  window.__placeNav = placeNavIndicator;
+
+  window.addEventListener('DOMContentLoaded', () => {
+    placeNavIndicator();
+    const navItems = $$('#public-nav .nav-item');
+    if (navItems.length > 0 && window.MutationObserver) {
+      const navObserver = new MutationObserver((mutations) => {
+        let shouldUpdate = false;
+        for (const m of mutations) {
+          if (m.type === 'attributes' && m.attributeName === 'class') {
+            shouldUpdate = true;
+            break;
+          }
+        }
+        if (shouldUpdate) placeNavIndicator();
+      });
+      navItems.forEach((item) => navObserver.observe(item, { attributes: true, attributeFilter: ['class'] }));
+    }
+  });
+  window.addEventListener('load', placeNavIndicator);
+  window.addEventListener('resize', placeNavIndicator);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(placeNavIndicator);
 
   /* ---------- 404 for unknown routes ---------- */
   function checkRoute() {
@@ -404,7 +515,7 @@
   window.addEventListener('hashchange', checkRoute);
   window.addEventListener('DOMContentLoaded', checkRoute);
 
-  /* ---------- Skeleton fallback ---------- */
+  /* ---------- Skeleton Fallback ---------- */
   const firstSeen = new WeakMap();
 
   function failedMarkup(colspan) {
@@ -440,7 +551,140 @@
     });
   }, 1500);
 
-  /* ---------- Public API ---------- */
-  window.ShipLensUI = { toast, showErrorPage, hideErrorPage };
+  /* ---------- Validation Pills ---------- */
+  const PILL_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 7v6M12 17v.01"/></svg>';
+  let focusedInvalid = false;
+
+  function fieldMessage(el) {
+    const v = el.validity;
+    if (v.valueMissing) return t('fieldRequired');
+    if (v.typeMismatch && el.type === 'email') return t('fieldEmail');
+    if (v.rangeUnderflow) return t('fieldMin').replace('{n}', el.min);
+    return el.validationMessage || t('fieldInvalid');
+  }
+
+  function clearPill(el) {
+    if (el._uiPill) { el._uiPill.remove(); el._uiPill = null; }
+    el.removeAttribute('aria-invalid');
+    el.removeAttribute('aria-describedby');
+  }
+
+  function showPill(el, msg) {
+    clearPill(el);
+    const pill = document.createElement('span');
+    pill.className = 'field-pill';
+    pill.setAttribute('role', 'alert');
+    pill.id = 'msg-' + (el.id || 'field');
+    pill.innerHTML = PILL_ICON;
+    const text = document.createElement('span');
+    text.textContent = msg;
+    pill.appendChild(text);
+    (el.closest('.input-wrap') || el).insertAdjacentElement('afterend', pill);
+    el._uiPill = pill;
+    el.setAttribute('aria-invalid', 'true');
+    el.setAttribute('aria-describedby', pill.id);
+  }
+
+  document.addEventListener('invalid', (e) => {
+    const el = e.target;
+    if (!(el instanceof HTMLElement)) return;
+    e.preventDefault();
+    showPill(el, fieldMessage(el));
+    if (!focusedInvalid) {
+      focusedInvalid = true;
+      el.focus();
+      setTimeout(() => { focusedInvalid = false; }, 0);
+    }
+  }, true);
+
+  const clearOnEdit = (e) => { if (e.target && e.target._uiPill) clearPill(e.target); };
+  document.addEventListener('input', clearOnEdit, true);
+  document.addEventListener('change', clearOnEdit, true);
+
+  /* ---------- Prompt Dialog ---------- */
+  function askText(message) {
+    return new Promise((resolve) => {
+      const prev = document.activeElement;
+      const scrim = document.createElement('div');
+      scrim.className = 'dlg-scrim';
+      scrim.innerHTML =
+        '<div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlg-title" aria-describedby="dlg-desc">' +
+          '<h3 id="dlg-title"></h3><p id="dlg-desc"></p>' +
+          '<div class="form-group"><textarea id="dlg-input" rows="3" aria-labelledby="dlg-desc"></textarea></div>' +
+          '<div class="dlg-actions">' +
+            '<button type="button" class="btn btn-secondary" data-dlg="cancel"></button>' +
+            '<button type="button" class="btn btn-primary" data-dlg="ok"></button>' +
+          '</div>' +
+        '</div>';
+      $('#dlg-title', scrim).textContent = t('promptTitle');
+      $('#dlg-desc', scrim).textContent = message || '';
+      $('[data-dlg="cancel"]', scrim).textContent = t('promptCancel');
+      $('[data-dlg="ok"]', scrim).textContent = t('promptConfirm');
+      document.body.appendChild(scrim);
+
+      const input = $('#dlg-input', scrim);
+      const close = (value) => {
+        document.removeEventListener('keydown', onKey, true);
+        scrim.remove();
+        if (prev && prev.focus) prev.focus();
+        resolve(value);
+      };
+      const confirm = () => {
+        const v = input.value.trim();
+        if (!v) { showPill(input, t('promptRequired')); input.focus(); return; }
+        close(v);
+      };
+      function onKey(e) {
+        if (e.key === 'Escape') { e.preventDefault(); close(null); return; }
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); confirm(); return; }
+        if (e.key === 'Tab') {
+          const f = $$('textarea, button', scrim);
+          const first = f[0], last = f[f.length - 1];
+          if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+          else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        }
+      }
+      document.addEventListener('keydown', onKey, true);
+      scrim.addEventListener('click', (e) => {
+        if (e.target === scrim) return close(null);
+        const act = e.target.closest('[data-dlg]');
+        if (!act) return;
+        if (act.dataset.dlg === 'ok') confirm(); else close(null);
+      });
+      setTimeout(() => input.focus(), 30);
+    });
+  }
+
+  /* ---------- Headline Accents ---------- */
+  function applyAccents() {
+    if (isRtl()) return;
+    $$('[data-accent-tail]').forEach((el) => {
+      if (el.querySelector('em')) return;
+      const n = parseInt(el.getAttribute('data-accent-tail'), 10) || 1;
+      const words = el.textContent.trim().split(/\s+/);
+      if (words.length <= n) return;
+      const em = document.createElement('em');
+      em.textContent = words.slice(-n).join(' ');
+      el.textContent = '';
+      el.appendChild(document.createTextNode(words.slice(0, -n).join(' ') + ' '));
+      el.appendChild(em);
+    });
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    const orig = window.toggleLanguage;
+    if (typeof orig === 'function') {
+      window.toggleLanguage = function () {
+        const out = orig.apply(this, arguments);
+        applyAccents();
+        placeNavIndicator();
+        if (offlineOpen()) fillOfflineText();
+        return out;
+      };
+    }
+    applyAccents();
+  });
+
+  window.ShipLensUI = { toast, showErrorPage, hideErrorPage, prompt: askText };
   window.showErrorPage = showErrorPage;
 })();

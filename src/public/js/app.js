@@ -1,9 +1,113 @@
-// State
+// Global State
 let currentLang = 'en';
 let currentUser = null;
 let branches = [];
 let branchesLoaded = false;
 
+/* =====================================================================
+   Loader — Fluid Metaball Overlay
+   ===================================================================== */
+const Loader = (() => {
+  const MIN_VISIBLE = 500;
+  let shownAt = 0, hideTimer = null, offTimer = null, visible = false;
+  const node = () => document.getElementById('loader');
+  const defaultCaption = () => (currentLang === 'ur' ? 'ShipLens نوڈ سے ہم آہنگی ہو رہی ہے…' : 'Syncing ShipLens Node...');
+  return {
+    isShown: () => visible,
+    show(caption) {
+      const n = node();
+      if (!n) return;
+      clearTimeout(hideTimer); clearTimeout(offTimer);
+      const c = document.getElementById('loader-caption');
+      if (c) c.textContent = caption || defaultCaption();
+      if (!visible) {
+        visible = true; shownAt = Date.now();
+        n.classList.remove('hidden');
+        void n.offsetWidth;
+        n.classList.add('is-on');
+      }
+    },
+    hide() {
+      const n = node();
+      if (!n || !visible) return;
+      clearTimeout(hideTimer);
+      const wait = Math.max(0, MIN_VISIBLE - (Date.now() - shownAt));
+      hideTimer = setTimeout(() => {
+        visible = false;
+        n.classList.remove('is-on');
+        offTimer = setTimeout(() => n.classList.add('hidden'), 320);
+      }, wait);
+    }
+  };
+})();
+window.Loader = Loader;
+
+/* =====================================================================
+   Theme Switcher & Curtain Wipe
+   ===================================================================== */
+const THEME_KEY = 'shiplens_theme';
+const THEME_LABELS = {
+  en: { toLight: 'Switch to light mode', toDark: 'Switch to dark mode' },
+  ur: { toLight: 'لائٹ موڈ پر جائیں', toDark: 'ڈارک موڈ پر جائیں' }
+};
+
+function currentTheme() {
+  return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+}
+
+function syncThemeToggle() {
+  const btn = document.getElementById('theme-toggle');
+  if (!btn) return;
+  const light = currentTheme() === 'light';
+  btn.setAttribute('aria-pressed', String(light));
+  btn.setAttribute('aria-label', THEME_LABELS[currentLang][light ? 'toDark' : 'toLight']);
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  try { localStorage.setItem(THEME_KEY, theme); } catch (_) {}
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', theme === 'light' ? '#F8FAFC' : '#07060d');
+  syncThemeToggle();
+}
+
+function toggleTheme() {
+  const next = currentTheme() === 'dark' ? 'light' : 'dark';
+  const direction = next === 'light' ? 'to-light' : 'to-dark';
+
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    applyTheme(next);
+    return;
+  }
+
+  // Modern View Transitions
+  if (typeof document.startViewTransition === 'function') {
+    document.documentElement.setAttribute('data-transition', direction);
+    const transition = document.startViewTransition(() => {
+      applyTheme(next);
+    });
+
+    transition.finished.finally(() => {
+      document.documentElement.removeAttribute('data-transition');
+    });
+    return;
+  }
+
+  // Fallback curtain
+  const curtain = document.createElement('div');
+  curtain.className = 'theme-curtain';
+  curtain.dataset.to = next;
+  document.body.appendChild(curtain);
+
+  curtain.addEventListener('animationend', () => {
+    applyTheme(next);
+    curtain.remove();
+  }, { once: true });
+}
+
+/* =====================================================================
+   Translations
+   ===================================================================== */
 const i18n = {
   en: {
     nav_home: 'Home',
@@ -25,6 +129,7 @@ const i18n = {
     label_notes: 'Statement of Intent / Skills',
     btn_submit_app: 'Submit Volunteer Application',
     nav_login: 'Portal Login',
+    nav_portal: 'Open Portal',
     nav_logout: 'Sign Out',
     login_title: 'Staff & Officer Authentication',
     login_subtitle: 'Enter credentials to access role-authorized operational pipelines.',
@@ -53,6 +158,7 @@ const i18n = {
     label_notes: 'شمولیت کا مقصد یا مہارتیں',
     btn_submit_app: 'درخواست جمع کروائیں',
     nav_login: 'پورٹل لاگ ان',
+    nav_portal: 'پورٹل کھولیں',
     nav_logout: 'لاگ آؤٹ',
     login_title: 'عملہ و افسران کی لاگ ان تصدیق',
     login_subtitle: 'اپنے مجاز اختیارات والے ڈیش بورڈ تک رسائی کے لیے لاگ ان کریں۔',
@@ -63,16 +169,13 @@ const i18n = {
   }
 };
 
-/* ---------- Helpers ---------- */
-
-// Escape anything coming from the database before putting it in innerHTML (XSS fix)
+/* ---------- Utility Helpers ---------- */
 function esc(value) {
   return String(value ?? '').replace(/[&<>"']/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[c]));
 }
 
-// Toast (from ui.js) with a safe fallback
 function notify(type, message, duration) {
   if (window.ShipLensUI && window.ShipLensUI.toast) window.ShipLensUI.toast(type, message, duration);
   else alert(message);
@@ -81,7 +184,8 @@ function notify(type, message, duration) {
 const STATUS_CLASS = {
   APPROVED: 'success', ACCEPTED: 'success', PUBLISHED: 'success', ACTIVE: 'success',
   SUBMITTED: 'info', FROZEN: 'info', APPLIED: 'info',
-  DRAFT: 'warning', RETURNED: 'danger', DECLINED: 'danger', INACTIVE: 'danger'
+  DRAFT: 'warning', RETURNED: 'danger', DECLINED: 'danger', INACTIVE: 'danger',
+  FORMING: 'info', PAUSED: 'warning', CLOSED: 'danger'
 };
 
 function pill(status) {
@@ -97,7 +201,6 @@ function emptyRow(cols, text) {
   return `<tr><td colspan="${cols}" class="text-center">${esc(text)}</td></tr>`;
 }
 
-// Safe JSON parser to guard against HTML responses
 async function safeJson(response) {
   const contentType = response.headers.get('content-type') || '';
   if (contentType.includes('application/json')) {
@@ -129,15 +232,53 @@ function toggleLanguage() {
       el.innerText = i18n[currentLang][key];
     }
   });
+  syncThemeToggle();
+}
+
+/* =====================================================================
+   Portal & Navigation State Machine
+   ===================================================================== */
+const PORTAL_VIEWS = ['branch-lead-view', 'hr-lead-view', 'finance-view', 'editor-view'];
+
+function portalViewFor(role) {
+  switch (role) {
+    case 'BRANCH_LEAD': return 'branch-lead-view';
+    case 'HR_LEAD': return 'hr-lead-view';
+    case 'FINANCE_REVIEWER':
+    case 'SUPER_ADMIN': return 'finance-view';
+    case 'CONTENT_EDITOR': return 'editor-view';
+    default: return null;
+  }
+}
+
+function activeViewId() {
+  const v = document.querySelector('.view:not(.hidden)');
+  return v ? v.id : null;
+}
+
+function syncPortalButton(viewId) {
+  const btn = document.getElementById('open-portal');
+  if (!btn) return;
+  const canOpen = !!(currentUser && portalViewFor(currentUser.role));
+  btn.classList.toggle('hidden', !canOpen || PORTAL_VIEWS.includes(viewId));
 }
 
 function showView(viewId) {
   document.querySelectorAll('.view').forEach((v) => v.classList.add('hidden'));
   const target = document.getElementById(viewId);
   if (target) target.classList.remove('hidden');
+  
+  if (PORTAL_VIEWS.includes(viewId)) {
+    document.querySelectorAll('#public-nav .nav-item.active').forEach((l) => l.classList.remove('active'));
+  }
+  syncPortalButton(viewId);
 }
 
-// 7 Public Pages Router
+function handleBrandClick() {
+  if (currentUser && portalViewFor(currentUser.role)) openPortal();
+  else navigateTo('home');
+}
+
 function navigateTo(pageName) {
   document.querySelectorAll('#public-nav .nav-item').forEach((link) => {
     link.classList.remove('active');
@@ -166,7 +307,7 @@ function navigateTo(pageName) {
   }
 }
 
-// Fetch active branches for dropdown and public directory
+// Fetch active branches
 async function fetchBranches() {
   try {
     const res = await fetch('/branches');
@@ -189,16 +330,14 @@ async function fetchBranches() {
       if (tbody) tbody.innerHTML = failedRow(4);
     }
   } catch (e) {
-    console.error('Error loading branches:', e);
     const tbody = document.querySelector('#public-branches-table tbody');
     if (tbody) tbody.innerHTML = failedRow(4);
   }
 }
 
-// Populate Public Branches Directory Table
 function renderPublicBranchesTable() {
   const tbody = document.querySelector('#public-branches-table tbody');
-  if (!tbody || !branchesLoaded) return; // keep skeleton until data arrives
+  if (!tbody || !branchesLoaded) return;
 
   if (branches.length === 0) {
     tbody.innerHTML = emptyRow(4, 'No branches listed yet.');
@@ -215,7 +354,6 @@ function renderPublicBranchesTable() {
   `).join('');
 }
 
-// Fetch published bulletins from /content
 async function loadHomeBulletins() {
   const container = document.getElementById('home-bulletins-list');
   if (!container) return;
@@ -248,7 +386,6 @@ async function loadHomeBulletins() {
   }
 }
 
-// Public volunteer application submission
 async function handleVolunteerSubmit(event) {
   event.preventDefault();
   const alertEl = document.getElementById('app-alert');
@@ -288,14 +425,23 @@ async function handleVolunteerSubmit(event) {
   }
 }
 
-// Handle authentication
+/* =====================================================================
+   Authentication Flow (Guaranteed Non-Blocking)
+   ===================================================================== */
 async function handleLogin(event) {
   event.preventDefault();
   const alertEl = document.getElementById('login-alert');
-  alertEl.className = 'alert hidden';
+  if (alertEl) {
+    alertEl.className = 'alert hidden';
+    alertEl.innerText = '';
+  }
 
-  const email = document.getElementById('login-email').value;
-  const password = document.getElementById('login-password').value;
+  const emailInput = document.getElementById('login-email');
+  const passwordInput = document.getElementById('login-password');
+  if (!emailInput || !passwordInput) return;
+
+  const email = emailInput.value.trim();
+  const password = passwordInput.value;
 
   try {
     const res = await fetch('/auth/login', {
@@ -306,27 +452,52 @@ async function handleLogin(event) {
 
     const data = await safeJson(res);
 
-    if (res.ok) {
-      currentUser = data.user;
+    if (res.ok && data.token) {
+      currentUser = data.user || JSON.parse(atob(data.token.split('.')[1]));
       localStorage.setItem('shiplens_token', data.token);
-      document.getElementById('login-form').reset();
-      renderAuthenticatedState();
-      notify('success', `Signed in as ${currentUser.email}`);
+
+      const form = document.getElementById('login-form');
+      if (form) form.reset();
+
+      renderAuthenticatedState(true);
+      notify('success', `Signed in as ${currentUser.email || email}`);
     } else {
       throw new Error(data.message || data.error || 'Invalid credentials');
     }
   } catch (err) {
-    alertEl.innerText = err.message;
-    alertEl.className = 'alert alert-error';
+    if (alertEl) {
+      alertEl.innerText = err.message || 'Login failed. Please check your credentials.';
+      alertEl.className = 'alert alert-error';
+      alertEl.classList.remove('hidden');
+    } else {
+      notify('error', err.message || 'Login failed');
+    }
   }
 }
 
-function renderAuthenticatedState() {
-  document.getElementById('auth-buttons').classList.add('hidden');
-  document.getElementById('user-profile').classList.remove('hidden');
-  document.getElementById('user-role-badge').innerText = currentUser.role;
-  document.getElementById('user-email-display').innerText = currentUser.email;
+function renderAuthenticatedState(openDashboard = true) {
+  const authBtns = document.getElementById('auth-buttons');
+  const userProfile = document.getElementById('user-profile');
+  if (authBtns) authBtns.classList.add('hidden');
+  if (userProfile) userProfile.classList.remove('hidden');
 
+  const roleBadge = document.getElementById('user-role-badge');
+  if (roleBadge) {
+    roleBadge.innerText = currentUser.role;
+    roleBadge.title = currentUser.email;
+  }
+  const emailDisplay = document.getElementById('user-email-display');
+  if (emailDisplay) emailDisplay.innerText = currentUser.email;
+
+  if (!openDashboard) {
+    syncPortalButton(activeViewId());
+    return;
+  }
+  openPortal();
+}
+
+function openPortal() {
+  if (!currentUser) return;
   switch (currentUser.role) {
     case 'BRANCH_LEAD':
       showView('branch-lead-view');
@@ -353,13 +524,19 @@ function renderAuthenticatedState() {
 function logout() {
   currentUser = null;
   localStorage.removeItem('shiplens_token');
-  document.getElementById('user-profile').classList.add('hidden');
-  document.getElementById('auth-buttons').classList.remove('hidden');
+  const userProfile = document.getElementById('user-profile');
+  const authBtns = document.getElementById('auth-buttons');
+  const portalBtn = document.getElementById('open-portal');
+  if (userProfile) userProfile.classList.add('hidden');
+  if (authBtns) authBtns.classList.remove('hidden');
+  if (portalBtn) portalBtn.classList.add('hidden');
   navigateTo('home');
   notify('info', 'You have been signed out.');
 }
 
-// HR Actions: Load Applications, Review & Accept
+/* =====================================================================
+   Role Dashboard Actions
+   ===================================================================== */
 async function loadHRRoster() {
   const appsTbody = document.querySelector('#hr-applications-table tbody');
   if (appsTbody) {
@@ -378,7 +555,7 @@ async function loadHRRoster() {
               <td>${esc(a.preferred_branch_name || 'Unassigned')}</td>
               <td>
                 <button type="button" class="btn btn-primary btn-sm" onclick="reviewApplication('${esc(a.id)}', 'ACCEPTED', '${esc(a.preferred_branch_id || '')}')">Accept & Mint</button>
-                <button type="button" class="btn btn-outline btn-sm" onclick="reviewApplication('${esc(a.id)}', 'DECLINED')">Decline</button>
+                <button type="button" class="btn btn-outline btn-sm btn-decline" onclick="reviewApplication('${esc(a.id)}', 'DECLINED')">Decline</button>
               </td>
             </tr>
           `).join('');
@@ -387,7 +564,6 @@ async function loadHRRoster() {
         appsTbody.innerHTML = failedRow(5);
       }
     } catch (err) {
-      console.error('Failed to load applications:', err);
       appsTbody.innerHTML = failedRow(5);
     }
   }
@@ -415,7 +591,6 @@ async function loadHRRoster() {
         rosterTbody.innerHTML = failedRow(5);
       }
     } catch (err) {
-      console.error('Failed to load members:', err);
       rosterTbody.innerHTML = failedRow(5);
     }
   }
@@ -448,7 +623,6 @@ async function reviewApplication(applicationId, status, preferredBranchId) {
   }
 }
 
-// Branch Lead Actions: Collections & Weekly Reporting
 async function handleRecordCollection(event) {
   event.preventDefault();
   const amountPkr = parseInt(document.getElementById('col-amount-pkr').value, 10);
@@ -456,12 +630,14 @@ async function handleRecordCollection(event) {
   const collectionDate = document.getElementById('col-date').value;
   const form = event.target;
 
+  const branchId = (currentUser && (currentUser.branchId || currentUser.branch_id)) || null;
+
   try {
     const res = await fetch('/collections', {
       method: 'POST',
       headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
-        branchId: currentUser.branchId,
+        branchId,
         amountPaisa,
         collectionDate
       })
@@ -490,12 +666,14 @@ async function handleCreateReport(event) {
     return;
   }
 
+  const branchId = (currentUser && (currentUser.branchId || currentUser.branch_id)) || null;
+
   try {
     const res = await fetch('/reports', {
       method: 'POST',
       headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
-        branchId: currentUser.branchId,
+        branchId,
         weekStartDate: startDate,
         weekEndDate: endDate,
         submissionNotes: document.getElementById('rep-notes').value
@@ -543,7 +721,6 @@ async function loadBranchLeadReports() {
       tbody.innerHTML = failedRow(4);
     }
   } catch (err) {
-    console.error('Failed to load reports:', err);
     tbody.innerHTML = failedRow(4);
   }
 }
@@ -566,7 +743,6 @@ async function submitReport(id) {
   }
 }
 
-// Finance Reviewer Actions: Approve & Freeze Snapshots
 async function loadFinanceQueue() {
   const tbody = document.querySelector('#finance-reports-table tbody');
   if (!tbody) return;
@@ -587,7 +763,7 @@ async function loadFinanceQueue() {
           <td>${pill(r.status)}</td>
           <td>
             <button type="button" class="btn btn-primary btn-sm" onclick="approveReport('${esc(r.id)}')">Approve & Freeze</button>
-            <button type="button" class="btn btn-outline btn-sm" onclick="returnReport('${esc(r.id)}')">Return</button>
+            <button type="button" class="btn btn-outline btn-sm btn-decline" onclick="returnReport('${esc(r.id)}')">Return</button>
           </td>
         </tr>
       `).join('');
@@ -595,7 +771,6 @@ async function loadFinanceQueue() {
       tbody.innerHTML = failedRow(5);
     }
   } catch (err) {
-    console.error('Failed to load finance queue:', err);
     tbody.innerHTML = failedRow(5);
   }
 }
@@ -619,7 +794,10 @@ async function approveReport(id) {
 }
 
 async function returnReport(id) {
-  const reason = prompt('Enter rejection / clarification notes for the branch lead:');
+  const promptMsg = 'Enter rejection / clarification notes for the branch lead:';
+  const reason = (window.ShipLensUI && window.ShipLensUI.prompt)
+    ? await window.ShipLensUI.prompt(promptMsg)
+    : prompt(promptMsg);
   if (!reason) return;
 
   try {
@@ -641,7 +819,6 @@ async function returnReport(id) {
   }
 }
 
-// Content Editor Actions
 async function loadEditorContentList() {
   const tbody = document.querySelector('#editor-content-table tbody');
   if (!tbody) return;
@@ -671,7 +848,6 @@ async function loadEditorContentList() {
       tbody.innerHTML = failedRow(4);
     }
   } catch (err) {
-    console.error('Failed to load editor content:', err);
     tbody.innerHTML = failedRow(4);
   }
 }
@@ -740,7 +916,6 @@ async function unpublishContentItem(id) {
   }
 }
 
-// Download formula-sanitized reports CSV
 function exportReportsCsv() {
   fetch('/reports/export/csv', { headers: authHeaders() })
     .then((res) => {
@@ -761,7 +936,9 @@ function exportReportsCsv() {
     .catch((err) => notify('error', err.message));
 }
 
-// Initial bootstrap
+/* =====================================================================
+   Initial Bootstrap
+   ===================================================================== */
 window.addEventListener('DOMContentLoaded', () => {
   fetchBranches();
 
@@ -794,13 +971,12 @@ window.addEventListener('DOMContentLoaded', () => {
   if (token) {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
-      // Drop expired tokens instead of showing a dashboard that will 401
       if (payload.exp && payload.exp * 1000 < Date.now()) {
         localStorage.removeItem('shiplens_token');
         notify('warning', 'Your session has expired. Please sign in again.');
       } else {
         currentUser = payload;
-        renderAuthenticatedState();
+        renderAuthenticatedState(currentHash === 'home');
       }
     } catch {
       localStorage.removeItem('shiplens_token');

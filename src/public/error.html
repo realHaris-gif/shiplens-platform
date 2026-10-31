@@ -4,11 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex">
-  <meta name="theme-color" content="#7c3aed">
+  <meta name="theme-color" content="#07060d">
+  <meta name="color-scheme" content="dark light">
+  <script>try{var t=localStorage.getItem("shiplens_theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
   <title>ShipLens — Error</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@500&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
@@ -28,12 +30,12 @@
   <script>
     /* Which error? ?code=403 → HTTP status of this response → path (/403) → 404 */
     const MSG = {
-      en: { home: 'Go to home', retry: 'Try again',
+      en: { home: 'Go to home', retry: 'Try again', retryConn: 'Retry connection',
         403: ['Access denied', 'You don’t have permission to view this page. If you think this is a mistake, contact your administrator.'],
         404: ['Page not found', 'The page you’re looking for doesn’t exist or has been moved.'],
         500: ['Something went wrong', 'Our servers hit an unexpected problem. Please try again in a moment.'],
         offline: ['You’re offline', 'Check your internet connection and try again.'] },
-      ur: { home: 'ہوم پر جائیں', retry: 'دوبارہ کوشش کریں',
+      ur: { home: 'ہوم پر جائیں', retry: 'دوبارہ کوشش کریں', retryConn: 'کنکشن دوبارہ آزمائیں',
         403: ['رسائی ممنوع', 'آپ کو یہ صفحہ دیکھنے کی اجازت نہیں ہے۔ اگر آپ کو لگتا ہے کہ یہ غلطی ہے تو اپنے منتظم سے رابطہ کریں۔'],
         404: ['صفحہ نہیں ملا', 'جو صفحہ آپ تلاش کر رہے ہیں وہ موجود نہیں یا منتقل ہو چکا ہے۔'],
         500: ['کچھ غلط ہو گیا', 'ہمارے سرور میں غیر متوقع مسئلہ پیش آیا۔ براہِ کرم کچھ دیر بعد دوبارہ کوشش کریں۔'],
@@ -72,7 +74,7 @@
       document.getElementById('code').textContent = kind === 'offline' ? (lang === 'ur' ? 'آف لائن' : 'Offline') : kind;
       document.getElementById('title').textContent = m[kind][0];
       document.getElementById('desc').textContent = m[kind][1];
-      document.getElementById('primary').textContent = (kind === '500' || kind === 'offline') ? m.retry : m.home;
+      document.getElementById('primary').textContent = kind === 'offline' ? m.retryConn : (kind === '500' ? m.retry : m.home);
       document.getElementById('lang').textContent = lang === 'ur' ? 'English' : 'اردو';
       document.title = 'ShipLens — ' + m[kind][0];
     }
