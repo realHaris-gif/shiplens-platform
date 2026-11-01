@@ -59,7 +59,6 @@ RBAC_ADMIN_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/admin/system
 info "4. Fetching Test Branch Details"
 BRANCHES_JSON=$(curl -s "$BASE_URL/branches")
 
-# Resolve exact branch assigned to lead.lahore@shiplens.org (BR-101) and foreign branch (BR-102)
 LAHORE_ID=$(node -e '
   const data = JSON.parse(process.argv[1]);
   const b = data.find(x => x.code === "BR-101") || data[0];
@@ -79,36 +78,77 @@ else
 fi
 
 info "5. Offline Financial Ledger & Integer Paisa Constraints"
+# Query existing approved reports to find an unused past Monday (<= today)
+EXISTING_REPORTS=$(curl -s "$BASE_URL/reports" -H "Authorization: Bearer $LEAD_TOKEN")
+
+DATES_JSON=$(node -e '
+  const existing = JSON.parse(process.argv[1] || "[]");
+  const approvedMondays = new Set(
+    existing
+      .filter(r => r.status === "APPROVED")
+      .map(r => r.week_start_date.split("T")[0])
+  );
+
+  // Search past Mondays starting 4 weeks ago back through 2026
+  const now = new Date();
+  const day = now.getUTCDay();
+  const diffToMonday = (day === 0 ? -6 : 1) - day;
+  const currentMonday = new Date(now);
+  currentMonday.setUTCDate(now.getUTCDate() + diffToMonday);
+
+  let chosenStart = null;
+  for (let w = 4; w < 40; w++) {
+    const candidate = new Date(currentMonday);
+    candidate.setUTCDate(currentMonday.getUTCDate() - (w * 7));
+    const iso = candidate.toISOString().split("T")[0];
+    if (!approvedMondays.has(iso)) {
+      chosenStart = candidate;
+      break;
+    }
+  }
+
+  const startIso = chosenStart.toISOString().split("T")[0];
+  const end = new Date(chosenStart);
+  end.setUTCDate(chosenStart.getUTCDate() + 6);
+  const endIso = end.toISOString().split("T")[0];
+
+  console.log(JSON.stringify({ weekStart: startIso, weekEnd: endIso }));
+' "$EXISTING_REPORTS")
+
+WEEK_START=$(node -e 'console.log(JSON.parse(process.argv[1]).weekStart)' "$DATES_JSON")
+WEEK_END=$(node -e 'console.log(JSON.parse(process.argv[1]).weekEnd)' "$DATES_JSON")
+COL_DATE="$WEEK_START"
+
 # Reject float
 FLOAT_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/collections" \
   -H "Authorization: Bearer $LEAD_TOKEN" \
   -H "Content-Type: application/json" \
-  -d "{\"branchId\":\"$LAHORE_ID\",\"amountPaisa\":1250.75,\"collectionDate\":\"2026-09-14\"}")
+  -d "{\"branchId\":\"$LAHORE_ID\",\"amountPaisa\":1250.75,\"collectionDate\":\"$COL_DATE\"}")
 [ "$FLOAT_CODE" -eq 422 ] && pass "Floating-point paisa correctly rejected (422)" || fail "Float paisa accepted or wrong code: $FLOAT_CODE"
 
 # Reject foreign branch access
 CROSS_BRANCH_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/collections" \
   -H "Authorization: Bearer $LEAD_TOKEN" \
   -H "Content-Type: application/json" \
-  -d "{\"branchId\":\"$KARACHI_ID\",\"amountPaisa\":500000,\"collectionDate\":\"2026-09-14\"}")
+  -d "{\"branchId\":\"$KARACHI_ID\",\"amountPaisa\":500000,\"collectionDate\":\"$COL_DATE\"}")
 [ "$CROSS_BRANCH_CODE" -eq 403 ] && pass "Cross-branch collection attempt forbidden (403)" || fail "Cross-branch vulnerability: got $CROSS_BRANCH_CODE"
 
 # Log valid collection (PKR 5,000 = 500,000 Paisa)
 COL_RES=$(curl -s -X POST "$BASE_URL/collections" \
   -H "Authorization: Bearer $LEAD_TOKEN" \
   -H "Content-Type: application/json" \
-  -d "{\"branchId\":\"$LAHORE_ID\",\"amountPaisa\":500000,\"collectionDate\":\"2026-09-14\"}")
-COL_ID=$(echo "$COL_RES" | grep -o '"id":"[^"]*' | cut -d'"' -f4)
-[ -n "$COL_ID" ] && pass "Recorded 500,000 Paisa collection ($COL_ID)" || fail "Failed to log collection: $COL_RES"
+  -d "{\"branchId\":\"$LAHORE_ID\",\"amountPaisa\":500000,\"collectionDate\":\"$COL_DATE\"}")
+COL_ID=$(echo "$COL_RES" | grep -o '"id":"[^"]*' | head -n 1 | cut -d'"' -f4)
+[ -n "$COL_ID" ] && pass "Recorded 500,000 Paisa collection for date $COL_DATE ($COL_ID)" || fail "Failed to log collection: $COL_RES"
 
 info "6. Weekly Report State Machine & Concurrency Lock"
-# Draft report with a unique week to avoid historical unique-key collisions
+# Draft report using the matching unapproved week
 DRAFT_RES=$(curl -s -X POST "$BASE_URL/reports" \
   -H "Authorization: Bearer $LEAD_TOKEN" \
   -H "Content-Type: application/json" \
-  -d "{\"branchId\":\"$LAHORE_ID\",\"weekStartDate\":\"2026-09-14\",\"weekEndDate\":\"2026-09-20\",\"submissionNotes\":\"Automated ledger verification run\"}")
-REPORT_ID=$(echo "$DRAFT_RES" | grep -o '"id":"[^"]*' | cut -d'"' -f4)
-[ -n "$REPORT_ID" ] && pass "Weekly report drafted ($REPORT_ID)" || fail "Failed to draft report: $DRAFT_RES"
+  -d "{\"branchId\":\"$LAHORE_ID\",\"weekStartDate\":\"$WEEK_START\",\"weekEndDate\":\"$WEEK_END\",\"submissionNotes\":\"Automated verification run\"}")
+REPORT_ID=$(echo "$DRAFT_RES" | grep -o '"id":"[^"]*' | head -n 1 | cut -d'"' -f4)
+[ -n "$REPORT_ID" ] && pass "Weekly report drafted for period $WEEK_START to $WEEK_END ($REPORT_ID)" || fail "Failed to draft report: $DRAFT_RES"
 
 # Submit report
 SUBMIT_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X PATCH "$BASE_URL/reports/$REPORT_ID/submit" \
@@ -118,14 +158,22 @@ SUBMIT_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X PATCH "$BASE_URL/reports
 # Approve report as Finance Reviewer
 APPROVE_RES=$(curl -s -X PATCH "$BASE_URL/reports/$REPORT_ID/approve" \
   -H "Authorization: Bearer $FIN_TOKEN")
-APPROVE_STATUS=$(echo "$APPROVE_RES" | grep -o '"status":"[^"]*' | cut -d'"' -f4)
+APPROVE_STATUS=$(echo "$APPROVE_RES" | grep -o '"status":"[^"]*' | head -n 1 | cut -d'"' -f4)
 [ "$APPROVE_STATUS" == "APPROVED" ] && pass "Report APPROVED and metrics frozen in JSONB" || fail "Approval failed: $APPROVE_RES"
 
 info "7. Executive Head Office Dashboard (KPI Integrity)"
 DASH_RES=$(curl -s "$BASE_URL/dashboard" -H "Authorization: Bearer $ADMIN_TOKEN")
-APPROVED_PKR=$(echo "$DASH_RES" | grep -o '"approvedPkr":"[^"]*' | cut -d'"' -f4)
+APPROVED_PKR=$(node -e '
+  try {
+    const data = JSON.parse(process.argv[1]);
+    console.log(data.summary && data.summary.approvedPkr ? data.summary.approvedPkr : "");
+  } catch(e) {
+    console.log("");
+  }
+' "$DASH_RES")
+
 if [ -n "$APPROVED_PKR" ]; then
-  pass "Dashboard returned active metrics (Approved: PKR $APPROVED_PKR)"
+  pass "Dashboard returned clean summary metrics (Approved: PKR $APPROVED_PKR)"
 else
   fail "Dashboard failed to return expected summary structure: $DASH_RES"
 fi
@@ -143,7 +191,7 @@ UNIQUE_EMAIL="volunteer.$(date +%s)@example.com"
 APP_RES=$(curl -s -X POST "$BASE_URL/applications" \
   -H "Content-Type: application/json" \
   -d "{\"fullName\":\"Tariq Jameel\",\"email\":\"$UNIQUE_EMAIL\",\"phone\":\"+923001234567\",\"preferredBranchId\":\"$LAHORE_ID\"}")
-APP_ID=$(echo "$APP_RES" | grep -o '"id":"[^"]*' | cut -d'"' -f4)
+APP_ID=$(echo "$APP_RES" | grep -o '"id":"[^"]*' | head -n 1 | cut -d'"' -f4)
 [ -n "$APP_ID" ] && pass "Public volunteer application submitted ($APP_ID)" || fail "Volunteer intake failed: $APP_RES"
 
 # Accept & Mint Member
@@ -151,25 +199,35 @@ MINT_RES=$(curl -s -X PATCH "$BASE_URL/applications/$APP_ID/review" \
   -H "Authorization: Bearer $HR_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{\"status\":\"ACCEPTED\",\"assignedBranchId\":\"$LAHORE_ID\"}")
-MEMBER_CODE=$(echo "$MINT_RES" | grep -o '"member_code":"[^"]*' | cut -d'"' -f4)
+MEMBER_CODE=$(echo "$MINT_RES" | grep -o '"member_code":"[^"]*' | head -n 1 | cut -d'"' -f4)
 [ -n "$MEMBER_CODE" ] && pass "Application converted; minted member code ($MEMBER_CODE)" || fail "Member minting failed: $MINT_RES"
-
 info "10. CMS & Public Bulletins"
+UNIQUE_TITLE="Emergency Dispatch $(date +%s)"
 CMS_RES=$(curl -s -X POST "$BASE_URL/admin/content" \
   -H "Authorization: Bearer $EDITOR_TOKEN" \
   -H "Content-Type: application/json" \
-  -d "{\"title\":\"Emergency Dispatch 2026\",\"category\":\"ANNOUNCEMENT\",\"summary\":\"Field updates\",\"body\":\"Full operational briefing.\"}")
-ITEM_ID=$(echo "$CMS_RES" | grep -o '"id":"[^"]*' | cut -d'"' -f4)
+  -d "{\"title\":\"$UNIQUE_TITLE\",\"category\":\"ANNOUNCEMENT\",\"summary\":\"Field updates\",\"body\":\"Full operational briefing.\"}")
+
+ITEM_ID=$(node -e '
+  try {
+    const data = JSON.parse(process.argv[1]);
+    console.log(data.id || (data.item && data.item.id) || "");
+  } catch(e) {
+    console.log("");
+  }
+' "$CMS_RES")
+
+if [ -z "$ITEM_ID" ]; then
+  fail "Failed to extract item ID from CMS response: $CMS_RES"
+fi
 
 PUB_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X PATCH "$BASE_URL/admin/content/$ITEM_ID/publish" \
   -H "Authorization: Bearer $EDITOR_TOKEN")
-[ "$PUB_CODE" -eq 200 ] && pass "Draft bulletin created and PUBLISHED" || fail "CMS publish failed ($PUB_CODE)"
+[ "$PUB_CODE" -eq 200 ] && pass "Draft bulletin created and PUBLISHED ($ITEM_ID)" || fail "CMS publish failed with HTTP $PUB_CODE"
 
 PUBLIC_FEED=$(curl -s "$BASE_URL/content")
-if echo "$PUBLIC_FEED" | grep -q "Emergency Dispatch 2026"; then
+if echo "$PUBLIC_FEED" | grep -q "$UNIQUE_TITLE"; then
   pass "Published bulletin confirmed in anonymous public feed"
 else
   fail "Bulletin not visible in public content feed"
 fi
-
-echo -e "\n${GREEN}ALL 10 FUNCTIONAL & SECURITY SUITES PASSED VERIFICATION.${NC}\n"
