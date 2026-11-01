@@ -1,18 +1,16 @@
 import { Router } from 'express';
 import { AuthController } from '../controllers/auth.controller';
 import { authenticate, requireRoles } from '../middleware/auth.middleware';
+import { loginLimiter } from '../middleware/rateLimiter';
 import { Role } from '../types';
 
 const router = Router();
 
-// --- Authentication Endpoints ---
-router.post('/auth/login', AuthController.login);
-router.post('/login', AuthController.login);
+// P0-01: Login with loginLimiter directly bound, unauthenticated aliases removed
+router.post('/auth/login', loginLimiter, AuthController.login);
+router.post('/auth/logout', authenticate, AuthController.logout);
 
-router.post('/auth/logout', AuthController.logout);
-router.post('/logout', AuthController.logout);
-
-// --- RBAC Gate Verification Routes ---
+// RBAC Gate Verification Routes
 router.get(
   '/admin/system-settings',
   authenticate,

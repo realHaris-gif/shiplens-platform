@@ -14,22 +14,42 @@ export interface UpdateCollectionInput {
 
 export class CollectionService {
   /**
-   * Records a daily physical collection. Strictly validates positive integer paisa.
+   * Records a daily physical collection. Validates positive integer paisa and past/present date.
    */
   static async recordCollection(
     input: CreateCollectionInput,
     actorId: string,
+    actorBranchScope: string | null = null,
     ipAddress?: string
   ) {
     if (!Number.isInteger(input.amountPaisa) || input.amountPaisa <= 0) {
       throw new Error('Amount must be a positive integer representing paisa (1 PKR = 100 paisa)');
     }
 
+    // P0-03: Scope verification inside the service
+    if (actorBranchScope && input.branchId !== actorBranchScope) {
+      throw new Error('Cannot record collection for a foreign branch');
+    }
+
+    // VAL-2: Date format and future date validation
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.collectionDate)) {
+      throw new Error('Collection date must be in YYYY-MM-DD format');
+    }
+    const colDate = new Date(`${input.collectionDate}T00:00:00Z`);
+    if (isNaN(colDate.getTime())) {
+      throw new Error('Invalid collection date');
+    }
+    const today = new Date();
+    today.setUTCHours(23, 59, 59, 999);
+    if (colDate > today) {
+      throw new Error('Collection date cannot be in the future');
+    }
+
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
 
-      // Verify branch is active
+      // Verify branch exists and is active
       const branchRes = await client.query(
         'SELECT status FROM branches WHERE id = $1',
         [input.branchId]
@@ -39,6 +59,21 @@ export class CollectionService {
       }
       if (branchRes.rows[0].status !== 'ACTIVE') {
         throw new Error('Collections can only be logged for ACTIVE branches');
+      }
+
+      // P0-13: Reject collection if dated inside an already SUBMITTED or APPROVED report week
+      const conflictReportRes = await client.query(
+        `SELECT id, status FROM weekly_reports 
+         WHERE branch_id = $1 
+           AND week_start_date <= $2 
+           AND week_end_date >= $2 
+           AND status IN ('SUBMITTED', 'RESUBMITTED', 'APPROVED')`,
+        [input.branchId, input.collectionDate]
+      );
+      if (conflictReportRes.rows.length > 0) {
+        throw new Error(
+          `Cannot log collections for a period covered by a ${conflictReportRes.rows[0].status} weekly report`
+        );
       }
 
       const insertQuery = `
@@ -76,13 +111,15 @@ export class CollectionService {
   }
 
   /**
-   * Updates an existing collection record subject to the 7-day locking rule.
+   * Updates an existing collection record subject to branch scoping and the 7-day rule.
    */
   static async updateCollection(
     collectionId: string,
     input: UpdateCollectionInput,
     actorId: string,
-    ipAddress?: string
+    actorBranchScope: string | null = null,
+    ipAddress?: string,
+    currentTimestampMs: number = Date.now() // COL-1: Controllable clock for unit tests
   ) {
     const client = await pool.connect();
     try {
@@ -99,19 +136,24 @@ export class CollectionService {
 
       const current = selectRes.rows[0];
 
-      // 1. Explicit lock check
+      // P0-03: Scope verification (hide record existence from other branches)
+      if (actorBranchScope && current.branch_id !== actorBranchScope) {
+        throw new Error('Collection not found');
+      }
+
+      // Explicit lock check
       if (current.is_locked) {
         throw new Error('Cannot edit a locked collection record');
       }
 
-      // 2. 7-Day immutability window check
+      // COL-1: 7-Day immutability window check with controllable clock
       const createdAt = new Date(current.created_at).getTime();
-      const now = Date.now();
-      const diffInDays = (now - createdAt) / (1000 * 60 * 60 * 24);
+      const diffInDays = (currentTimestampMs - createdAt) / (1000 * 60 * 60 * 24);
 
       if (diffInDays > 7) {
-        // Automatically set is_locked = true if window elapsed
-        await client.query('UPDATE collections SET is_locked = true WHERE id = $1', [collectionId]);
+        // Persist the lock
+        await client.query('UPDATE collections SET is_locked = true, updated_at = CURRENT_TIMESTAMP WHERE id = $1', [collectionId]);
+        await client.query('COMMIT');
         throw new Error('Collection record is older than 7 days and is permanently locked against modifications');
       }
 
@@ -120,6 +162,33 @@ export class CollectionService {
 
       if (!Number.isInteger(Number(amountPaisa)) || Number(amountPaisa) <= 0) {
         throw new Error('Amount must be a positive integer representing paisa');
+      }
+
+      if (input.collectionDate) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(input.collectionDate)) {
+          throw new Error('Collection date must be in YYYY-MM-DD format');
+        }
+        const colDate = new Date(`${input.collectionDate}T00:00:00Z`);
+        const today = new Date();
+        today.setUTCHours(23, 59, 59, 999);
+        if (colDate > today) {
+          throw new Error('Collection date cannot be in the future');
+        }
+      }
+
+      // P0-13: Reject update if date falls under an already SUBMITTED or APPROVED report
+      const conflictReportRes = await client.query(
+        `SELECT id, status FROM weekly_reports 
+         WHERE branch_id = $1 
+           AND week_start_date <= $2 
+           AND week_end_date >= $2 
+           AND status IN ('SUBMITTED', 'RESUBMITTED', 'APPROVED')`,
+        [current.branch_id, collectionDate]
+      );
+      if (conflictReportRes.rows.length > 0) {
+        throw new Error(
+          `Cannot update collection into a period covered by a ${conflictReportRes.rows[0].status} weekly report`
+        );
       }
 
       const updateRes = await client.query(
@@ -151,12 +220,10 @@ export class CollectionService {
     }
   }
 
-  /**
-   * Locks a collection record against any further alteration
-   */
   static async lockCollection(
     collectionId: string,
     actorId: string,
+    actorBranchScope: string | null = null,
     ipAddress?: string
   ) {
     const client = await pool.connect();
@@ -173,6 +240,10 @@ export class CollectionService {
       }
 
       const current = selectRes.rows[0];
+      if (actorBranchScope && current.branch_id !== actorBranchScope) {
+        throw new Error('Collection not found');
+      }
+
       if (current.is_locked) {
         throw new Error('Collection is already locked');
       }
@@ -205,12 +276,10 @@ export class CollectionService {
     }
   }
 
-  /**
-   * Marks a collection as transferred to the central bank account
-   */
   static async markTransferred(
     collectionId: string,
     actorId: string,
+    actorBranchScope: string | null = null,
     ipAddress?: string
   ) {
     const client = await pool.connect();
@@ -227,6 +296,14 @@ export class CollectionService {
       }
 
       const current = selectRes.rows[0];
+      if (actorBranchScope && current.branch_id !== actorBranchScope) {
+        throw new Error('Collection not found');
+      }
+
+      // VAL-2: Idempotency check
+      if (current.is_sent_to_main_account) {
+        throw new Error('Collection has already been transferred to the central account');
+      }
 
       const updateRes = await client.query(
         `UPDATE collections 
@@ -256,10 +333,7 @@ export class CollectionService {
     }
   }
 
-  /**
-   * Retrieves collections for a branch with branch metadata
-   */
-  static async listCollections(branchId?: string) {
+  static async listCollections(branchId?: string | null) {
     let query = `
       SELECT c.*, b.name AS branch_name, b.code AS branch_code
       FROM collections c
@@ -278,10 +352,7 @@ export class CollectionService {
     return res.rows;
   }
 
-  /**
-   * Retrieves all unrouted collections (not yet remitted to central account)
-   */
-  static async listUnroutedCollections(branchId?: string) {
+  static async listUnroutedCollections(branchId?: string | null) {
     let query = `
       SELECT c.*, b.name AS branch_name, b.code AS branch_code
       FROM collections c

@@ -1,5 +1,5 @@
 import { pool } from '../config/db';
-import { WeeklyReportStatus, Role } from '../types';
+import { WeeklyReportStatus } from '../types';
 import { AuditService } from './audit.service';
 
 export interface CreateReportInput {
@@ -11,32 +11,62 @@ export interface CreateReportInput {
 
 export class ReportService {
   /**
-   * Drafts a new weekly branch report
+   * Helper to recalculate actual collections sum inside a locked transaction
+   */
+  private static async computeCollectionsTotal(
+    client: any,
+    branchId: string,
+    startDate: string,
+    endDate: string
+  ): Promise<string> {
+    const sumRes = await client.query(
+      `SELECT COALESCE(SUM(amount_paisa), 0) AS total 
+       FROM collections 
+       WHERE branch_id = $1 
+         AND collection_date >= $2 
+         AND collection_date <= $3`,
+      [branchId, startDate, endDate]
+    );
+    return sumRes.rows[0].total.toString();
+  }
+
+  /**
+   * Drafts a new weekly branch report with strict Monday-to-Sunday checking
    */
   static async createDraft(
     input: CreateReportInput,
     actorId: string,
+    actorBranchScope: string | null = null,
     ipAddress?: string
   ) {
-    // 0. Strict Date Validation
     if (!input.weekStartDate || !input.weekEndDate) {
       throw new Error('Both weekStartDate and weekEndDate are required');
     }
 
-    const startDate = new Date(input.weekStartDate);
-    const endDate = new Date(input.weekEndDate);
+    if (actorBranchScope && input.branchId !== actorBranchScope) {
+      throw new Error('Cannot create report for another branch');
+    }
+
+    // P0-14: Server-enforced Monday-to-Sunday ISO week boundaries
+    const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+    if (!datePattern.test(input.weekStartDate) || !datePattern.test(input.weekEndDate)) {
+      throw new Error('Dates must be in YYYY-MM-DD format');
+    }
+
+    const startDate = new Date(`${input.weekStartDate}T00:00:00Z`);
+    const endDate = new Date(`${input.weekEndDate}T00:00:00Z`);
 
     if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
       throw new Error('Invalid date format for weekStartDate or weekEndDate');
     }
 
-    if (endDate < startDate) {
-      throw new Error('Week End Date cannot be earlier than Week Start Date');
+    // Day of week check: getUTCDay() === 1 is Monday
+    if (startDate.getUTCDay() !== 1) {
+      throw new Error('weekStartDate must fall on a Monday');
     }
 
-    // Ensure period spans exactly 7 days (0 to 6 days difference)
-    const diffTime = endDate.getTime() - startDate.getTime();
-    const diffDays = Math.round(diffTime / (1000 * 3600 * 24));
+    // Exact 6-day span (Monday to Sunday)
+    const diffDays = Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24));
     if (diffDays !== 6) {
       throw new Error('A weekly report period must span exactly 7 days (Monday to Sunday)');
     }
@@ -45,7 +75,6 @@ export class ReportService {
     try {
       await client.query('BEGIN');
 
-      // 1. Verify branch exists and is active
       const branchRes = await client.query(
         'SELECT status FROM branches WHERE id = $1',
         [input.branchId]
@@ -57,16 +86,13 @@ export class ReportService {
         throw new Error('Reports can only be created for ACTIVE branches');
       }
 
-      // 2. Sum collections for this branch during this week
-      const sumRes = await client.query(
-        `SELECT COALESCE(SUM(amount_paisa), 0) AS total 
-         FROM collections 
-         WHERE branch_id = $1 
-           AND collection_date >= $2 
-           AND collection_date <= $3`,
-        [input.branchId, input.weekStartDate, input.weekEndDate]
+      // Compute initial sum from database
+      const totalAmountPaisa = await this.computeCollectionsTotal(
+        client,
+        input.branchId,
+        input.weekStartDate,
+        input.weekEndDate
       );
-      const totalAmountPaisa = BigInt(sumRes.rows[0].total);
 
       const insertQuery = `
         INSERT INTO weekly_reports (
@@ -81,9 +107,9 @@ export class ReportService {
         input.weekStartDate,
         input.weekEndDate,
         WeeklyReportStatus.DRAFT,
-        totalAmountPaisa.toString(),
+        totalAmountPaisa,
         input.submissionNotes || null,
-        actorId,
+        null, // submitted_by is formally assigned on submission
       ]);
 
       const report = res.rows[0];
@@ -109,11 +135,13 @@ export class ReportService {
   }
 
   /**
-   * Submits a draft report for HQ review
+   * Submits or resubmits a report for HQ review.
+   * Recalculates total_amount_paisa inside transaction and logs proper action.
    */
   static async submitReport(
     reportId: string,
     actorId: string,
+    actorBranchScope: string | null = null,
     ipAddress?: string
   ) {
     const client = await pool.connect();
@@ -129,6 +157,12 @@ export class ReportService {
       }
 
       const current = selectRes.rows[0];
+
+      // P0-03: Scope check
+      if (actorBranchScope && current.branch_id !== actorBranchScope) {
+        throw new Error('Report not found');
+      }
+
       if (
         current.status !== WeeklyReportStatus.DRAFT &&
         current.status !== WeeklyReportStatus.RETURNED
@@ -136,22 +170,34 @@ export class ReportService {
         throw new Error(`Cannot submit report in status ${current.status}`);
       }
 
-      const nextStatus =
-        current.status === WeeklyReportStatus.RETURNED
-          ? WeeklyReportStatus.RESUBMITTED
-          : WeeklyReportStatus.SUBMITTED;
+      const isResubmit = current.status === WeeklyReportStatus.RETURNED;
+      const nextStatus = isResubmit
+        ? WeeklyReportStatus.RESUBMITTED
+        : WeeklyReportStatus.SUBMITTED;
+
+      // P0-13: Recompute collections total dynamically inside the locked transaction
+      const freshTotalPaisa = await this.computeCollectionsTotal(
+        client,
+        current.branch_id,
+        current.week_start_date,
+        current.week_end_date
+      );
 
       const updateRes = await client.query(
         `UPDATE weekly_reports 
-         SET status = $1, updated_at = CURRENT_TIMESTAMP 
-         WHERE id = $2 RETURNING *`,
-        [nextStatus, reportId]
+         SET status = $1, 
+             total_amount_paisa = $2, 
+             submitted_by = $3, 
+             updated_at = CURRENT_TIMESTAMP 
+         WHERE id = $4 RETURNING *`,
+        [nextStatus, freshTotalPaisa, actorId, reportId]
       );
       const updated = updateRes.rows[0];
 
+      // P0-14: Distinguish submission from resubmission in audit log
       await AuditService.log(client, {
         actor_id: actorId,
-        action: 'REPORT_SUBMITTED',
+        action: isResubmit ? 'REPORT_RESUBMITTED' : 'REPORT_SUBMITTED',
         entity_type: 'WEEKLY_REPORT',
         record_id: reportId,
         before_state: current,
@@ -170,11 +216,12 @@ export class ReportService {
   }
 
   /**
-   * Approves report, freezes metrics snapshot in JSONB, and locks associated collections
+   * Approves report, freezes metrics snapshot in JSONB, and locks associated collections.
    */
   static async approveReport(
     reportId: string,
     actorId: string,
+    actorBranchScope: string | null = null,
     ipAddress?: string
   ) {
     const client = await pool.connect();
@@ -190,12 +237,26 @@ export class ReportService {
       }
 
       const current = selectRes.rows[0];
+
+      // P0-03: Scope check
+      if (actorBranchScope && current.branch_id !== actorBranchScope) {
+        throw new Error('Report not found');
+      }
+
       if (
         current.status !== WeeklyReportStatus.SUBMITTED &&
         current.status !== WeeklyReportStatus.RESUBMITTED
       ) {
         throw new Error(`Cannot approve report in status ${current.status}`);
       }
+
+      // P0-13: Recompute the final collections total immediately before freezing
+      const finalTotalPaisa = await this.computeCollectionsTotal(
+        client,
+        current.branch_id,
+        current.week_start_date,
+        current.week_end_date
+      );
 
       // Roll up active members for this branch
       const memberCountRes = await client.query(
@@ -204,7 +265,7 @@ export class ReportService {
       );
       const activeMembersCount = memberCountRes.rows[0].count;
 
-      // Roll up collection count and details
+      // Roll up collection details
       const collectionsRes = await client.query(
         `SELECT id, amount_paisa, collection_date 
          FROM collections 
@@ -218,7 +279,7 @@ export class ReportService {
       const frozenMetrics = {
         approvedAt: new Date().toISOString(),
         approvedBy: actorId,
-        totalAmountPaisa: current.total_amount_paisa,
+        totalAmountPaisa: finalTotalPaisa,
         collectionsCount: collectionsRes.rows.length,
         activeMembersSnapshot: activeMembersCount,
         collectionRecords: collectionsRes.rows.map((r: any) => ({
@@ -228,7 +289,7 @@ export class ReportService {
         })),
       };
 
-      // Lock all associated collections
+      // Lock all collections in this approved week
       await client.query(
         `UPDATE collections 
          SET is_locked = true, updated_at = CURRENT_TIMESTAMP 
@@ -238,12 +299,16 @@ export class ReportService {
         [current.branch_id, current.week_start_date, current.week_end_date]
       );
 
-      // Transition report to APPROVED with frozen metrics
+      // P0-14: Transition report to APPROVED with frozen metrics and final recalculated sum
       const updateRes = await client.query(
         `UPDATE weekly_reports 
-         SET status = $1, approved_by = $2, frozen_metrics = $3, updated_at = CURRENT_TIMESTAMP 
-         WHERE id = $4 RETURNING *`,
-        [WeeklyReportStatus.APPROVED, actorId, JSON.stringify(frozenMetrics), reportId]
+         SET status = $1, 
+             approved_by = $2, 
+             total_amount_paisa = $3, 
+             frozen_metrics = $4, 
+             updated_at = CURRENT_TIMESTAMP 
+         WHERE id = $5 RETURNING *`,
+        [WeeklyReportStatus.APPROVED, actorId, finalTotalPaisa, JSON.stringify(frozenMetrics), reportId]
       );
       const updated = updateRes.rows[0];
 
@@ -274,6 +339,7 @@ export class ReportService {
     reportId: string,
     rejectionReason: string,
     actorId: string,
+    actorBranchScope: string | null = null,
     ipAddress?: string
   ) {
     if (!rejectionReason || rejectionReason.trim().length === 0) {
@@ -293,6 +359,10 @@ export class ReportService {
       }
 
       const current = selectRes.rows[0];
+      if (actorBranchScope && current.branch_id !== actorBranchScope) {
+        throw new Error('Report not found');
+      }
+
       if (
         current.status !== WeeklyReportStatus.SUBMITTED &&
         current.status !== WeeklyReportStatus.RESUBMITTED
@@ -328,7 +398,7 @@ export class ReportService {
     }
   }
 
-  static async listReports(filters: { branchId?: string; status?: string }) {
+  static async listReports(filters: { branchId?: string | null; status?: string }) {
     let query = 'SELECT * FROM weekly_reports WHERE 1=1';
     const params: any[] = [];
 

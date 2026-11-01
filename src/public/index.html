@@ -8,7 +8,7 @@
   <meta name="color-scheme" content="dark light">
   <!-- Apply saved theme before first paint (no flash) -->
   <script>try{var t=localStorage.getItem("shiplens_theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);if(t==="light")document.querySelector('meta[name="theme-color"]').setAttribute("content","#F8FAFC")}catch(e){}</script>
-  <title>ShipLens — Operational & Governance Platform</title>
+  <title>ShipLens — Operational &amp; Governance Platform</title>
   <link rel="icon" href="/image_3.jpg">
 
   <!-- Fonts -->
@@ -509,13 +509,55 @@
     <!-- Finance Reviewer & Super Admin Dashboard -->
     <section id="finance-view" class="view hidden">
       <div class="view-header">
-        <h2>Central Financial Auditing &amp; <em>Frozen Snapshots</em></h2>
-        <p class="subtitle">Lock collections, approve weekly reports, and verify immutable audit trail</p>
+        <h2>Executive Dashboard &amp; <em>Central Audit</em></h2>
+        <p class="subtitle">Nationwide Financial Overview, Frozen Snapshots &amp; Weekly Review Queue</p>
       </div>
 
+      <!-- Executive KPI Cards Grid -->
+      <div class="grid-3 mb-4" id="dashboard-metrics-grid">
+        <div class="card metric-card">
+          <span class="role-badge">Approved Audited</span>
+          <div class="metric-val" id="metric-approved-pkr">PKR 0.00</div>
+          <p class="subtitle" style="margin:0">Permanently frozen &amp; locked</p>
+        </div>
+        <div class="card metric-card">
+          <span class="role-badge" style="color:var(--warn-ink)">Pending Review</span>
+          <div class="metric-val" id="metric-pending-pkr">PKR 0.00</div>
+          <p class="subtitle" style="margin:0" id="metric-pending-count">0 reports awaiting review</p>
+        </div>
+        <div class="card metric-card">
+          <span class="role-badge" style="color:var(--err-ink)">Unrouted Collections</span>
+          <div class="metric-val" id="metric-unrouted-pkr">PKR 0.00</div>
+          <p class="subtitle" style="margin:0" id="metric-unrouted-count">0 items not remitted</p>
+        </div>
+      </div>
+
+      <!-- Nationwide Branch Breakdown -->
+      <div class="card mb-4">
+        <h3>Regional Branch Financial Status</h3>
+        <div class="table-responsive mt-2">
+          <table class="data-table" id="dashboard-branches-table">
+            <thead>
+              <tr>
+                <th>Branch Code</th>
+                <th>Branch Name</th>
+                <th>City</th>
+                <th>Approved Collections</th>
+                <th>Approved Reports</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="skeleton-row"><td colspan="6"><span class="skeleton skeleton-line"></span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Review Queue & Export -->
       <div class="card">
         <div class="card-head">
-          <h3>Pending Reports for Executive Review</h3>
+          <h3>Pending Weekly Reports for Executive Review</h3>
           <button type="button" class="btn btn-secondary" onclick="exportReportsCsv()">Export Reports (CSV)</button>
         </div>
         <div class="table-responsive mt-4">

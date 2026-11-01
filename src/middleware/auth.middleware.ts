@@ -31,7 +31,7 @@ export const authenticate = (
     const decoded = AuthService.verifyToken(token);
     req.user = decoded;
     return next();
-  } catch {
+  } catch (err: any) {
     return res.status(401).json({
       error: 'Unauthorized',
       message: 'Token has expired or is invalid',
@@ -49,6 +49,18 @@ export const requireRoles = (allowedRoles: Role[]) => {
     }
 
     if (!allowedRoles.includes(req.user.role)) {
+      // SEC-4: Structured security logging without sensitive data
+      console.warn(JSON.stringify({
+        level: 'WARN',
+        event: 'AUTH_FORBIDDEN',
+        time: new Date().toISOString(),
+        ip: req.ip || req.socket.remoteAddress,
+        userId: req.user.userId,
+        userRole: req.user.role,
+        requiredRoles: allowedRoles,
+        path: req.originalUrl,
+      }));
+
       return res.status(403).json({
         error: 'Forbidden',
         message: `Action denied. Requires one of: [${allowedRoles.join(', ')}]`,

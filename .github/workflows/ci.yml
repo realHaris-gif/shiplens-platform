@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ main ]
 
+
+permissions:
+  contents: read
+
 jobs:
   test-and-build:
     runs-on: ubuntu-latest
@@ -15,20 +19,21 @@ jobs:
         image: postgres:16-alpine
         env:
           POSTGRES_USER: shiplens_user
-          POSTGRES_PASSWORD: shiplens_secret
-          POSTGRES_DB: shiplens_db
+          POSTGRES_PASSWORD: shiplens_ci_secret_password
+          POSTGRES_DB: shiplens_test_db
         ports:
           - 5432:5432
         options: >-
           --health-cmd pg_isready
-          --health-interval 10s
+          --health-interval 5s
           --health-timeout 5s
           --health-retries 5
 
     env:
-      DATABASE_URL: postgresql://shiplens_user:shiplens_secret@localhost:5432/shiplens_db
+      DATABASE_URL: postgresql://shiplens_user:shiplens_ci_secret_password@localhost:5432/shiplens_test_db
       NODE_ENV: test
       PORT: 3000
+      DB_SSL: "false"
       JWT_SECRET: ci-test-secret-key-32-chars-long-minimum-integrity
 
     steps:
@@ -44,21 +49,48 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Run Schema Migrations
-        run: |
-          for file in $(ls -1 src/db/migrations/*.sql | sort); do
-            echo "Applying migration: $file"
-            PGPASSWORD=shiplens_secret psql -h localhost -U shiplens_user -d shiplens_db -f "$file"
-          done
+      # INF-5: Dependency vulnerability audit
+      - name: Security Vulnerability Audit
+        run: npm audit --audit-level=high --omit=dev || true
 
-      - name: Compile TypeScript & Copy Assets
-        run: npm run build
+      # Fail fast on TypeScript compilation & typing issues before running tests
+      - name: Typecheck TypeScript
+        run: npx tsc --noEmit
 
+      # INF-5: Run linter if configured
       - name: Run Linter
         run: npm run lint --if-present
 
+      # P0-11: Apply migrations safely using the app's migration runner (with schema_migrations tracking)
+      - name: Run Database Migrations
+        run: npx ts-node src/db/migrate.ts
+
+      # P0-10 & INF-4: Run test suite with strict coverage enforcement (all thresholds >= 60%)
       - name: Run Test Suite with Coverage
         run: npm run test:coverage
 
+      # Compile production build
+      - name: Compile Production Build
+        run: npm run build
+
+      # INF-1 & INF-5: Build Docker container and execute runtime healthcheck smoke test
       - name: Build Docker Image
         run: docker build -t shiplens-app:latest .
+
+      - name: Verify Container Healthcheck Smoke Test
+        run: |
+          docker run -d --name shiplens_test_container \
+            --network host \
+            -e DATABASE_URL="$DATABASE_URL" \
+            -e JWT_SECRET="$JWT_SECRET" \
+            -e DB_SSL="false" \
+            -e PORT=3000 \
+            shiplens-app:latest
+          
+          # Allow container startup
+          sleep 6
+          
+          # Hit the /health probe to verify clean HTTP 200 boot
+          curl -f http://localhost:3000/health || exit 1
+          
+          docker stop shiplens_test_container

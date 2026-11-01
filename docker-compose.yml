@@ -1,22 +1,18 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16-alpine
     container_name: shiplens_postgres
     restart: always
     environment:
-      POSTGRES_USER: shiplens_user
-      POSTGRES_PASSWORD: shiplens_secret
-      POSTGRES_DB: shiplens_db
+      POSTGRES_USER: ${POSTGRES_USER:-shiplens_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be provided in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-shiplens_db}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      # Automatically run SQL migrations on first container startup
-      - ./src/db/migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U shiplens_user -d shiplens_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-shiplens_user} -d ${POSTGRES_DB:-shiplens_db}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -35,8 +31,15 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: postgresql://shiplens_user:shiplens_secret@postgres:5432/shiplens_db
-      JWT_SECRET: shiplens-docker-local-secret-32-chars-long-prod-key
+      DB_SSL: "false"
+      DATABASE_URL: postgresql://${POSTGRES_USER:-shiplens_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-shiplens_db}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be provided in .env}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health || curl -f http://localhost:3000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
 volumes:
   pgdata:

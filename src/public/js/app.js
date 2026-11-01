@@ -744,6 +744,48 @@ async function submitReport(id) {
 }
 
 async function loadFinanceQueue() {
+  // 1. Fetch Executive Dashboard KPIs & Regional Breakdown
+  try {
+    const dashRes = await fetch('/dashboard', { headers: authHeaders() });
+    if (dashRes.ok) {
+      const data = await safeJson(dashRes);
+      const summary = data.summary || {};
+
+      const approvedEl = document.getElementById('metric-approved-pkr');
+      const pendingEl = document.getElementById('metric-pending-pkr');
+      const pendingCountEl = document.getElementById('metric-pending-count');
+      const unroutedEl = document.getElementById('metric-unrouted-pkr');
+      const unroutedCountEl = document.getElementById('metric-unrouted-count');
+
+      if (approvedEl) approvedEl.textContent = `PKR ${Number(summary.approvedPkr || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+      if (pendingEl) pendingEl.textContent = `PKR ${Number(summary.pendingPkr || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+      if (pendingCountEl) pendingCountEl.textContent = `${summary.pendingReportsCount || 0} reports awaiting review`;
+      if (unroutedEl) unroutedEl.textContent = `PKR ${Number(summary.unroutedPkr || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+      if (unroutedCountEl) unroutedCountEl.textContent = `${summary.unroutedCollectionsCount || 0} items not remitted`;
+
+      const branchTbody = document.querySelector('#dashboard-branches-table tbody');
+      if (branchTbody && Array.isArray(data.branches)) {
+        if (data.branches.length === 0) {
+          branchTbody.innerHTML = emptyRow(6, 'No branches registered.');
+        } else {
+          branchTbody.innerHTML = data.branches.map((b) => `
+            <tr>
+              <td><strong>${esc(b.code)}</strong></td>
+              <td>${esc(b.name)}</td>
+              <td>${esc(b.city)}</td>
+              <td>PKR ${Number(b.approvedPkr || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+              <td>${esc(b.approvedReportsCount || 0)}</td>
+              <td>${pill(b.status)}</td>
+            </tr>
+          `).join('');
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load dashboard metrics:', err);
+  }
+
+  // 2. Fetch Review Queue Table
   const tbody = document.querySelector('#finance-reports-table tbody');
   if (!tbody) return;
 
@@ -759,10 +801,10 @@ async function loadFinanceQueue() {
         <tr>
           <td><code>${esc(String(r.id).slice(0, 8))}...</code></td>
           <td>${esc(formatDateDisplay(r.week_start_date))} to ${esc(formatDateDisplay(r.week_end_date))}</td>
-          <td>PKR ${(Number(r.total_amount_paisa) / 100).toLocaleString()}</td>
+          <td>PKR ${(Number(r.total_amount_paisa) / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
           <td>${pill(r.status)}</td>
           <td>
-            <button type="button" class="btn btn-primary btn-sm" onclick="approveReport('${esc(r.id)}')">Approve & Freeze</button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="approveReport('${esc(r.id)}')">Approve &amp; Freeze</button>
             <button type="button" class="btn btn-outline btn-sm btn-decline" onclick="returnReport('${esc(r.id)}')">Return</button>
           </td>
         </tr>

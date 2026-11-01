@@ -502,6 +502,8 @@ button[onclick^="returnReport"]:hover {
 .card-head h3 { margin-bottom: 0; }
 
 .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: 1.25rem; align-items: start; }
+.grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 1.25rem; align-items: start; }
+.mb-4 { margin-bottom: 1.5rem; }
 
 .features { display: grid; grid-template-columns: repeat(12, 1fr); gap: 1.25rem; }
 .features > .card { grid-column: span 5; }
@@ -515,6 +517,16 @@ button[onclick^="returnReport"]:hover {
 }
 .features > .card:first-child .feature-icon { margin-bottom: auto; width: 56px; height: 56px; }
 .feature-icon svg { width: 22px; height: 22px; }
+
+.metric-card { display: flex; flex-direction: column; gap: 0.5rem; padding: 1.5rem; }
+.metric-card .role-badge { width: fit-content; }
+.metric-val {
+  font: 400 clamp(1.8rem, 2.5vw, 2.4rem)/1.1 var(--font-display);
+  letter-spacing: -0.01em;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+  margin-block: 0.35rem;
+}
 
 .rows { padding-block: .4rem; }
 .rows .row { display: grid; grid-template-columns: minmax(9rem, .7fr) minmax(0, 1.3fr); gap: .5rem 2.5rem; align-items: baseline; padding: 1.6rem 0; border-top: 1px solid var(--line); }
@@ -601,7 +613,7 @@ select { appearance: none; -webkit-appearance: none; padding-inline-end: 2.6rem;
 .empty-state { display: flex; flex-direction: column; align-items: center; gap: .8rem; padding: 2.25rem 0; color: var(--fg-3); }
 
 /* --------------------------------------------------------------------------
-   Institutional Status Badges (No AI Green Dots)
+   Institutional Status Badges
    -------------------------------------------------------------------------- */
 .status-pill {
   --st: var(--ok);
@@ -785,7 +797,7 @@ select { appearance: none; -webkit-appearance: none; padding-inline-end: 2.6rem;
 .footer-brand img { height: 1.8rem; width: auto; object-fit: contain; }
 
 /* --------------------------------------------------------------------------
-   Directional Curtain Wipe (Bottom-to-Top for Light, Top-to-Bottom for Dark)
+   Directional Curtain Wipe
    -------------------------------------------------------------------------- */
 ::view-transition-old(root) {
   animation: none;
@@ -846,7 +858,6 @@ html[data-transition="to-dark"]::view-transition-new(root) {
   line-height: 1.9;
 }
 
-/* Reduce Nastaliq heading scaling to stop vertical clipping */
 [dir="rtl"] h1 {
   font-size: clamp(2rem, 3.8vw, 3.2rem) !important;
   line-height: 1.6 !important;
@@ -872,12 +883,10 @@ html[data-transition="to-dark"]::view-transition-new(root) {
   max-width: 50ch;
 }
 
-/* Fix Hero Margin Offset in RTL */
 [dir="rtl"] #view-home .hero {
   margin-inline-start: clamp(0rem, 8vw, 6rem);
 }
 
-/* Prevent punctuation flip on untranslated English text inside RTL */
 [dir="rtl"] .card p:not([lang="ur"]),
 [dir="rtl"] .card span:not([lang="ur"]),
 [dir="rtl"] .bulletin p:not([lang="ur"]) {
@@ -885,13 +894,11 @@ html[data-transition="to-dark"]::view-transition-new(root) {
   text-align: right;
 }
 
-/* Ensure Urdu nav links maintain vertical breathing room */
 [dir="rtl"] .nav-links .nav-item {
   font-size: 0.95rem;
   padding: 0.25rem 0.75rem;
 }
 
-/* Ensure Portal button inside nav aligns cleanly in RTL */
 [dir="rtl"] .btn-portal {
   flex-direction: row-reverse;
 }
