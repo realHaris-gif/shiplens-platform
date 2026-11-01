@@ -306,16 +306,42 @@
     setTimeout(check, 80);
   }, true);
 
-  window.handleContactSubmit = function (e) {
-    e.preventDefault();
-    const form = e.target;
-    form._uiTaskDone = false;
-    form._uiTask = new Promise((resolve) => setTimeout(resolve, 900)).then(() => {
-      form._uiTaskDone = true;
-      toast('success', t('contactSent'));
-      form.reset();
+  window.handleContactSubmit = async function (e) {
+  e.preventDefault();
+  const form = e.target;
+  const name = form.querySelector('#contact-name')?.value || '';
+  const email = form.querySelector('#contact-email')?.value || '';
+  const message = form.querySelector('#contact-message')?.value || '';
+  const submitBtn = form.querySelector('button[type="submit"]');
+
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.classList.add('is-loading');
+  }
+
+  try {
+    const res = await fetch('/contact', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, message })
     });
-  };
+
+    const data = await res.json();
+    if (res.ok) {
+      toast('success', currentLang === 'ur' ? 'پیغام کامیابی سے موصول ہو گیا ہے!' : 'Your message has been received by HQ.');
+      form.reset();
+    } else {
+      toast('error', data.message || 'Failed to transmit message.');
+    }
+  } catch (err) {
+    toast('error', 'Network failure connecting to Secretariat.');
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.classList.remove('is-loading');
+    }
+  }
+};
 
   document.addEventListener('click', (e) => {
     const toggle = e.target.closest('[data-toggle-password]');

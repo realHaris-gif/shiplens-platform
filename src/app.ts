@@ -14,6 +14,8 @@ import contentRoutes from './routes/content.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import userRoutes from './routes/user.routes';
 import auditRoutes from './routes/audit.routes';
+import { ContactController } from './controllers/contact.controller';
+import { errorHandler } from './middleware/error';
 
 
 const app: Application = express();
@@ -73,6 +75,8 @@ app.use(contentRoutes);
 app.use(dashboardRoutes);
 app.use(userRoutes);
 app.use(auditRoutes);
+app.post('/contact', ContactController.submit);
+app.use(errorHandler);
 
 // Explicit Root Route
 app.get('/', (_req: Request, res: Response) => {

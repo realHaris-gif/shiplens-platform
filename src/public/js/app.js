@@ -1,5 +1,5 @@
 // Global State
-let currentLang = 'en';
+let currentLang = localStorage.getItem('shiplens_lang') || 'en';
 let currentUser = null;
 let branches = [];
 let branchesLoaded = false;
@@ -80,7 +80,6 @@ function toggleTheme() {
     return;
   }
 
-  // Modern View Transitions
   if (typeof document.startViewTransition === 'function') {
     document.documentElement.setAttribute('data-transition', direction);
     const transition = document.startViewTransition(() => {
@@ -93,7 +92,6 @@ function toggleTheme() {
     return;
   }
 
-  // Fallback curtain
   const curtain = document.createElement('div');
   curtain.className = 'theme-curtain';
   curtain.dataset.to = next;
@@ -106,7 +104,7 @@ function toggleTheme() {
 }
 
 /* =====================================================================
-   Translations
+   Translations Dictionary
    ===================================================================== */
 const i18n = {
   en: {
@@ -183,7 +181,7 @@ function notify(type, message, duration) {
 
 const STATUS_CLASS = {
   APPROVED: 'success', ACCEPTED: 'success', PUBLISHED: 'success', ACTIVE: 'success',
-  SUBMITTED: 'info', FROZEN: 'info', APPLIED: 'info',
+  SUBMITTED: 'info', FROZEN: 'info', APPLIED: 'info', RESUBMITTED: 'info',
   DRAFT: 'warning', RETURNED: 'danger', DECLINED: 'danger', INACTIVE: 'danger',
   FORMING: 'info', PAUSED: 'warning', CLOSED: 'danger'
 };
@@ -194,7 +192,7 @@ function pill(status) {
 }
 
 function failedRow(cols) {
-  return `<tr><td colspan="${cols}" class="text-center"><div class="empty-state"><span>Couldn’t load this data.</span><button type="button" class="btn btn-outline btn-sm" data-reload>Retry</button></div></td></tr>`;
+  return `<tr><td colspan="${cols}" class="text-center"><div class="empty-state"><span>Couldn’t load this data.</span><button type="button" class="btn btn-outline btn-sm" onclick="location.reload()">Retry</button></div></td></tr>`;
 }
 
 function emptyRow(cols, text) {
@@ -211,7 +209,15 @@ async function safeJson(response) {
 }
 
 function authHeaders(extra = {}) {
-  return { 'Authorization': `Bearer ${localStorage.getItem('shiplens_token')}`, ...extra };
+  const token = localStorage.getItem('shiplens_token');
+  const headers = {
+    'X-Requested-With': 'ShipLens',
+    ...extra
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
 }
 
 function formatDateDisplay(rawDate) {
@@ -221,8 +227,10 @@ function formatDateDisplay(rawDate) {
 
 function toggleLanguage() {
   currentLang = currentLang === 'en' ? 'ur' : 'en';
+  localStorage.setItem('shiplens_lang', currentLang);
   document.documentElement.setAttribute('lang', currentLang);
   document.documentElement.setAttribute('dir', currentLang === 'ur' ? 'rtl' : 'ltr');
+
   const langLabel = document.getElementById('lang-label');
   if (langLabel) langLabel.innerText = i18n[currentLang].lang_toggle_text;
 
@@ -232,7 +240,11 @@ function toggleLanguage() {
       el.innerText = i18n[currentLang][key];
     }
   });
+
   syncThemeToggle();
+  loadHomeBulletins();
+  loadDynamicProgramsAndEvents();
+  renderPublicBranchesTable();
 }
 
 /* =====================================================================
@@ -267,7 +279,7 @@ function showView(viewId) {
   document.querySelectorAll('.view').forEach((v) => v.classList.add('hidden'));
   const target = document.getElementById(viewId);
   if (target) target.classList.remove('hidden');
-  
+
   if (PORTAL_VIEWS.includes(viewId)) {
     document.querySelectorAll('#public-nav .nav-item.active').forEach((l) => l.classList.remove('active'));
   }
@@ -304,6 +316,8 @@ function navigateTo(pageName) {
     loadHomeBulletins();
   } else if (pageName === 'branches') {
     renderPublicBranchesTable();
+  } else if (pageName === 'programs' || pageName === 'events') {
+    loadDynamicProgramsAndEvents();
   }
 }
 
@@ -349,7 +363,7 @@ function renderPublicBranchesTable() {
       <td><strong>${esc(b.code)}</strong></td>
       <td>${esc(b.name)}</td>
       <td>${esc(b.city)}</td>
-      <td><span class="status-pill status-success">ACTIVE</span></td>
+      <td><span class="status-pill status-success">${esc(b.status || 'ACTIVE')}</span></td>
     </tr>
   `).join('');
 }
@@ -359,7 +373,7 @@ async function loadHomeBulletins() {
   if (!container) return;
 
   try {
-    const res = await fetch('/content', {
+    const res = await fetch(`/content?lang=${currentLang}`, {
       headers: { 'Accept': 'application/json' }
     });
     if (res.ok) {
@@ -372,10 +386,10 @@ async function loadHomeBulletins() {
       container.innerHTML = items.map((item) => `
         <article class="bulletin">
           <div class="bulletin-head">
-            <h4>${esc(item.title)}</h4>
+            <h4>${esc(currentLang === 'ur' && item.title_ur ? item.title_ur : item.title)}</h4>
             <small>${esc(new Date(item.published_at || item.created_at).toLocaleDateString())}</small>
           </div>
-          <p>${esc(item.summary || (item.body || '').slice(0, 160) + '...')}</p>
+          <p>${esc(currentLang === 'ur' && item.summary_ur ? item.summary_ur : (item.summary || (item.body || '').slice(0, 160) + '...'))}</p>
         </article>
       `).join('');
     } else {
@@ -386,23 +400,64 @@ async function loadHomeBulletins() {
   }
 }
 
+async function loadDynamicProgramsAndEvents() {
+  // Programs
+  try {
+    const progRes = await fetch(`/content?category=PROGRAM&lang=${currentLang}`);
+    if (progRes.ok) {
+      const programs = await safeJson(progRes);
+      const container = document.getElementById('programs-cards-container');
+      if (container && programs.length > 0) {
+        container.innerHTML = programs.map((p) => `
+          <div class="card program-card">
+            <h3>${esc(currentLang === 'ur' && p.title_ur ? p.title_ur : p.title)}</h3>
+            <p>${esc(currentLang === 'ur' && p.summary_ur ? p.summary_ur : p.summary)}</p>
+          </div>
+        `).join('');
+      }
+    }
+  } catch (_) {}
+
+  // Events
+  try {
+    const evRes = await fetch(`/content?category=EVENT&lang=${currentLang}`);
+    if (evRes.ok) {
+      const events = await safeJson(evRes);
+      const container = document.getElementById('events-cards-container');
+      if (container && events.length > 0) {
+        container.innerHTML = events.map((e) => `
+          <div class="card event-card">
+            <h3>${esc(currentLang === 'ur' && e.title_ur ? e.title_ur : e.title)}</h3>
+            <p class="event-meta"><strong>Date:</strong> ${esc(formatDateDisplay(e.event_date) || 'TBD')}</p>
+            <p class="event-meta"><strong>Location:</strong> ${esc(currentLang === 'ur' && e.location_ur ? e.location_ur : (e.location || 'Nationwide'))}</p>
+            <p>${esc(currentLang === 'ur' && e.summary_ur ? e.summary_ur : e.summary)}</p>
+          </div>
+        `).join('');
+      }
+    }
+  } catch (_) {}
+}
+
 async function handleVolunteerSubmit(event) {
   event.preventDefault();
   const alertEl = document.getElementById('app-alert');
   alertEl.className = 'alert hidden';
 
   const payload = {
-    fullName: document.getElementById('fullName').value,
-    email: document.getElementById('email').value,
-    phone: document.getElementById('phone').value,
+    fullName: document.getElementById('fullName').value.trim(),
+    email: document.getElementById('email').value.trim(),
+    phone: document.getElementById('phone').value.trim(),
     preferredBranchId: document.getElementById('preferredBranch').value,
-    notes: document.getElementById('notes').value
+    notes: document.getElementById('notes').value.trim()
   };
 
   try {
     const res = await fetch('/applications', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'ShipLens'
+      },
       body: JSON.stringify(payload)
     });
 
@@ -416,7 +471,7 @@ async function handleVolunteerSubmit(event) {
       alertEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
       document.getElementById('volunteer-form').reset();
     } else {
-      throw new Error(data.error || 'Failed to submit application');
+      throw new Error(data.message || data.error || 'Failed to submit application');
     }
   } catch (err) {
     alertEl.innerText = err.message;
@@ -426,7 +481,7 @@ async function handleVolunteerSubmit(event) {
 }
 
 /* =====================================================================
-   Authentication Flow (Guaranteed Non-Blocking)
+   Authentication Flow
    ===================================================================== */
 async function handleLogin(event) {
   event.preventDefault();
@@ -446,21 +501,24 @@ async function handleLogin(event) {
   try {
     const res = await fetch('/auth/login', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'ShipLens'
+      },
       body: JSON.stringify({ email, password })
     });
 
     const data = await safeJson(res);
 
     if (res.ok && data.token) {
-      currentUser = data.user || JSON.parse(atob(data.token.split('.')[1]));
+      currentUser = data.user || null;
       localStorage.setItem('shiplens_token', data.token);
 
       const form = document.getElementById('login-form');
       if (form) form.reset();
 
       renderAuthenticatedState(true);
-      notify('success', `Signed in as ${currentUser.email || email}`);
+      notify('success', `Signed in as ${currentUser?.email || email}`);
     } else {
       throw new Error(data.message || data.error || 'Invalid credentials');
     }
@@ -482,12 +540,12 @@ function renderAuthenticatedState(openDashboard = true) {
   if (userProfile) userProfile.classList.remove('hidden');
 
   const roleBadge = document.getElementById('user-role-badge');
-  if (roleBadge) {
+  if (roleBadge && currentUser) {
     roleBadge.innerText = currentUser.role;
     roleBadge.title = currentUser.email;
   }
   const emailDisplay = document.getElementById('user-email-display');
-  if (emailDisplay) emailDisplay.innerText = currentUser.email;
+  if (emailDisplay && currentUser) emailDisplay.innerText = currentUser.email;
 
   if (!openDashboard) {
     syncPortalButton(activeViewId());
@@ -521,7 +579,14 @@ function openPortal() {
   }
 }
 
-function logout() {
+async function logout() {
+  try {
+    await fetch('/auth/logout', {
+      method: 'POST',
+      headers: authHeaders()
+    });
+  } catch (_) {}
+
   currentUser = null;
   localStorage.removeItem('shiplens_token');
   const userProfile = document.getElementById('user-profile');
@@ -573,7 +638,8 @@ async function loadHRRoster() {
     try {
       const membersRes = await fetch('/members', { headers: authHeaders() });
       if (membersRes.ok) {
-        const members = await safeJson(membersRes);
+        const membersData = await safeJson(membersRes);
+        const members = Array.isArray(membersData) ? membersData : (membersData.items || []);
         if (members.length === 0) {
           rosterTbody.innerHTML = emptyRow(5, 'No active members in roster.');
         } else {
@@ -597,26 +663,34 @@ async function loadHRRoster() {
 }
 
 async function reviewApplication(applicationId, status, preferredBranchId) {
+  let rejectionReason = undefined;
+  if (status === 'DECLINED') {
+    const promptMsg = 'Please enter a decline reason for the audit trail:';
+    rejectionReason = prompt(promptMsg);
+    if (!rejectionReason) return;
+  }
+
   try {
     const res = await fetch(`/applications/${applicationId}/review`, {
       method: 'PATCH',
       headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         status,
-        assignedBranchId: preferredBranchId || undefined
+        assignedBranchId: preferredBranchId || undefined,
+        rejectionReason
       })
     });
 
     const data = await safeJson(res);
     if (res.ok) {
       if (status === 'ACCEPTED') {
-        notify('success', `Volunteer accepted! Member code minted: ${data.member.member_code}`, 7000);
+        notify('success', `Volunteer accepted! Member code minted: ${data.member ? data.member.member_code : 'MEM-AUTO'}`, 7000);
       } else {
         notify('info', 'Application marked as declined.');
       }
       loadHRRoster();
     } else {
-      notify('error', data.error || 'Review operation failed');
+      notify('error', data.message || data.error || 'Review operation failed');
     }
   } catch (err) {
     notify('error', err.message);
@@ -625,11 +699,16 @@ async function reviewApplication(applicationId, status, preferredBranchId) {
 
 async function handleRecordCollection(event) {
   event.preventDefault();
-  const amountPkr = parseInt(document.getElementById('col-amount-pkr').value, 10);
-  const amountPaisa = amountPkr * 100;
+  const valStr = document.getElementById('col-amount-pkr').value.trim();
+  
+  // Safe integer-paisa parsing without IEEE floating-point drift
+  const parts = valStr.split('.');
+  const wholePkr = parseInt(parts[0], 10) || 0;
+  const fractionPaisa = parts[1] ? parseInt(parts[1].slice(0, 2).padEnd(2, '0'), 10) : 0;
+  const amountPaisa = (wholePkr * 100) + fractionPaisa;
+
   const collectionDate = document.getElementById('col-date').value;
   const form = event.target;
-
   const branchId = (currentUser && (currentUser.branchId || currentUser.branch_id)) || null;
 
   try {
@@ -645,10 +724,10 @@ async function handleRecordCollection(event) {
 
     const data = await safeJson(res);
     if (res.ok) {
-      notify('success', `Collection of PKR ${amountPkr.toLocaleString()} committed to the ledger.`);
+      notify('success', `Collection of PKR ${(amountPaisa / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })} committed to the ledger.`);
       form.reset();
     } else {
-      notify('error', data.error || 'Could not record collection');
+      notify('error', data.message || data.error || 'Could not record collection');
     }
   } catch (err) {
     notify('error', err.message);
@@ -686,7 +765,7 @@ async function handleCreateReport(event) {
       loadBranchLeadReports();
       form.reset();
     } else {
-      notify('error', data.error || 'Could not create report');
+      notify('error', data.message || data.error || 'Could not create report');
     }
   } catch (err) {
     notify('error', err.message);
@@ -708,11 +787,11 @@ async function loadBranchLeadReports() {
       tbody.innerHTML = reports.map((r) => `
         <tr>
           <td>${esc(formatDateDisplay(r.week_start_date))} to ${esc(formatDateDisplay(r.week_end_date))}</td>
-          <td>PKR ${(Number(r.total_amount_paisa) / 100).toLocaleString()}</td>
+          <td>PKR ${(Number(r.total_amount_paisa) / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
           <td>${pill(r.status)}</td>
           <td>
             ${r.status === 'DRAFT' || r.status === 'RETURNED'
-              ? `<button type="button" class="btn btn-primary btn-sm" onclick="submitReport('${esc(r.id)}')">Submit to HQ</button>`
+              ? `<button type="button" class="btn btn-primary btn-sm" onclick="submitReport('${esc(r.id)}')">${r.status === 'RETURNED' ? 'Resubmit' : 'Submit to HQ'}</button>`
               : '<span class="subtitle" style="margin:0">Locked / Under Review</span>'}
           </td>
         </tr>
@@ -736,7 +815,7 @@ async function submitReport(id) {
       notify('success', 'Report submitted for central review.');
       loadBranchLeadReports();
     } else {
-      notify('error', data.error || 'Submission failed');
+      notify('error', data.message || data.error || 'Submission failed');
     }
   } catch (err) {
     notify('error', err.message);
@@ -785,12 +864,12 @@ async function loadFinanceQueue() {
     console.error('Failed to load dashboard metrics:', err);
   }
 
-  // 2. Fetch Review Queue Table
+  // 2. Fetch Review Queue Table (SUBMITTED and RESUBMITTED)
   const tbody = document.querySelector('#finance-reports-table tbody');
   if (!tbody) return;
 
   try {
-    const res = await fetch('/reports?status=SUBMITTED', { headers: authHeaders() });
+    const res = await fetch('/reports?status=SUBMITTED,RESUBMITTED', { headers: authHeaders() });
     if (res.ok) {
       const reports = await safeJson(res);
       if (reports.length === 0) {
@@ -828,7 +907,7 @@ async function approveReport(id) {
       notify('success', 'Report approved. Collections locked and metrics snapshot frozen.', 6000);
       loadFinanceQueue();
     } else {
-      notify('error', data.error || 'Approval failed');
+      notify('error', data.message || data.error || 'Approval failed');
     }
   } catch (err) {
     notify('error', err.message);
@@ -854,7 +933,7 @@ async function returnReport(id) {
       notify('info', 'Report returned to branch lead.');
       loadFinanceQueue();
     } else {
-      notify('error', data.error || 'Could not return report');
+      notify('error', data.message || data.error || 'Could not return report');
     }
   } catch (err) {
     notify('error', err.message);
@@ -897,10 +976,10 @@ async function loadEditorContentList() {
 async function handleCreateContent(event) {
   event.preventDefault();
 
-  const title = document.getElementById('post-title').value;
+  const title = document.getElementById('post-title').value.trim();
   const category = document.getElementById('post-category').value;
-  const summary = document.getElementById('post-summary').value;
-  const body = document.getElementById('post-body').value;
+  const summary = document.getElementById('post-summary').value.trim();
+  const body = document.getElementById('post-body').value.trim();
 
   try {
     const res = await fetch('/admin/content', {
@@ -915,7 +994,7 @@ async function handleCreateContent(event) {
       document.getElementById('editor-form').reset();
       loadEditorContentList();
     } else {
-      notify('error', data.error || 'Failed to save draft');
+      notify('error', data.message || data.error || 'Failed to save draft');
     }
   } catch (err) {
     notify('error', err.message);
@@ -933,7 +1012,7 @@ async function publishContentItem(id) {
       notify('success', 'Bulletin published to the public portal.');
       loadEditorContentList();
     } else {
-      notify('error', data.error || 'Publish failed');
+      notify('error', data.message || data.error || 'Publish failed');
     }
   } catch (err) {
     notify('error', err.message);
@@ -951,7 +1030,7 @@ async function unpublishContentItem(id) {
       notify('info', 'Bulletin reverted to draft.');
       loadEditorContentList();
     } else {
-      notify('error', data.error || 'Unpublish failed');
+      notify('error', data.message || data.error || 'Unpublish failed');
     }
   } catch (err) {
     notify('error', err.message);
@@ -978,11 +1057,37 @@ function exportReportsCsv() {
     .catch((err) => notify('error', err.message));
 }
 
+function exportReportsPdf() {
+  fetch('/reports/export/pdf', { headers: authHeaders() })
+    .then((res) => {
+      if (!res.ok) throw new Error('Failed to generate PDF export');
+      return res.blob();
+    })
+    .then((blob) => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `shiplens-reports-${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      notify('success', 'PDF audit export downloaded.');
+    })
+    .catch((err) => notify('error', err.message));
+}
+
 /* =====================================================================
    Initial Bootstrap
    ===================================================================== */
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
+  document.documentElement.setAttribute('lang', currentLang);
+  document.documentElement.setAttribute('dir', currentLang === 'ur' ? 'rtl' : 'ltr');
+  const langLabel = document.getElementById('lang-label');
+  if (langLabel && i18n[currentLang]) langLabel.innerText = i18n[currentLang].lang_toggle_text;
+
   fetchBranches();
+  loadDynamicProgramsAndEvents();
 
   const repStart = document.getElementById('rep-start');
   const repEnd = document.getElementById('rep-end');
@@ -1009,19 +1114,29 @@ window.addEventListener('DOMContentLoaded', () => {
   const currentHash = window.location.hash.replace('#', '') || 'home';
   navigateTo(currentHash);
 
+  // Authenticate session from token or DB /auth/me check
   const token = localStorage.getItem('shiplens_token');
   if (token) {
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      if (payload.exp && payload.exp * 1000 < Date.now()) {
-        localStorage.removeItem('shiplens_token');
-        notify('warning', 'Your session has expired. Please sign in again.');
-      } else {
-        currentUser = payload;
+      const res = await fetch('/auth/me', { headers: authHeaders() });
+      if (res.ok) {
+        currentUser = await safeJson(res);
         renderAuthenticatedState(currentHash === 'home');
+      } else {
+        localStorage.removeItem('shiplens_token');
       }
     } catch {
-      localStorage.removeItem('shiplens_token');
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.exp && payload.exp * 1000 > Date.now()) {
+          currentUser = payload;
+          renderAuthenticatedState(currentHash === 'home');
+        } else {
+          localStorage.removeItem('shiplens_token');
+        }
+      } catch {
+        localStorage.removeItem('shiplens_token');
+      }
     }
   }
 });

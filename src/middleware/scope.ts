@@ -1,32 +1,64 @@
-import { Request } from 'express';
-import { Role } from '../types';
+// src/middleware/scope.ts
+import { Request, Response, NextFunction } from 'express';
+import { ForbiddenError, ValidationError } from './error';
 
-export class ScopeError extends Error {
-  statusCode: number;
-  constructor(message: string, statusCode: number = 403) {
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+// Backward-compatibility alias for legacy controllers
+export class ScopeError extends ForbiddenError {
+  constructor(message = 'Scope violation') {
     super(message);
     this.name = 'ScopeError';
-    this.statusCode = statusCode;
   }
 }
 
-export function scopedBranchId(req: Request): string | null {
+export function listScope(req: Request): string | null {
   const user = (req as any).user;
-  if (!user) {
-    throw new ScopeError('Authentication required to verify branch scope', 401);
-  }
+  if (!user) return null;
 
-  if (user.role === Role.BRANCH_LEAD) {
+  if (user.role === 'BRANCH_LEAD') {
     const branchId = user.branchId || user.branch_id;
-    if (!branchId) {
-      throw new ScopeError('Branch Lead has no assigned branch', 403);
-    }
+    if (!branchId) throw new ForbiddenError('No branch assigned to lead');
     return branchId;
   }
 
-  if (req.query && typeof req.query.branchId === 'string' && req.query.branchId.trim().length > 0) {
-    return req.query.branchId.trim();
+  const queryBranch = req.query.branchId;
+  if (typeof queryBranch === 'string' && queryBranch.trim()) {
+    if (!UUID_REGEX.test(queryBranch)) {
+      throw new ValidationError({ branchId: 'INVALID_ID' });
+    }
+    return queryBranch.trim();
   }
 
   return null;
 }
+
+export function ownBranchOrNull(req: Request): string | null {
+  const user = (req as any).user;
+  if (!user) return null;
+
+  if (user.role === 'BRANCH_LEAD') {
+    const branchId = user.branchId || user.branch_id;
+    if (!branchId) throw new ForbiddenError('No branch assigned to lead');
+    return branchId;
+  }
+
+  return null;
+}
+
+// Backward-compatible alias resolving to listScope
+export function scopedBranchId(req: Request): string | null {
+  return listScope(req);
+}
+
+export const validateUuidParam = (paramName = 'id') => (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+) => {
+  const val = req.params[paramName];
+  if (val && !UUID_REGEX.test(val)) {
+    return next(new ValidationError({ [paramName]: 'INVALID_ID' }));
+  }
+  next();
+};

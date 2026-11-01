@@ -2,9 +2,23 @@ import { Router } from 'express';
 import { ReportController } from '../controllers/report.controller';
 import { authenticate, requireRoles } from '../middleware/auth.middleware';
 import { Role } from '../types';
+import { PdfService } from '../services/pdf.service';
+import { ownBranchOrNull, listScope } from '../middleware/scope';
 
 const router = Router();
 
+
+router.get('/export/pdf', authenticate, async (req, res, next) => {
+  try {
+    const scope = listScope(req);
+    const pdfBuffer = await PdfService.generateReportsPdf(scope);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=shiplens-reports-${Date.now()}.pdf`);
+    res.send(pdfBuffer);
+  } catch (err) {
+    next(err);
+  }
+});
 // Draft and submit reports
 router.post(
   '/reports',
