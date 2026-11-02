@@ -869,26 +869,27 @@ async function loadFinanceQueue() {
   if (!tbody) return;
 
   try {
-    const res = await fetch('/reports?status=SUBMITTED,RESUBMITTED', { headers: authHeaders() });
+    const res = await fetch('/reports', { headers: authHeaders() });
     if (res.ok) {
-      const reports = await safeJson(res);
-      if (reports.length === 0) {
-        tbody.innerHTML = emptyRow(5, 'No reports currently awaiting review.');
-        return;
-      }
-      tbody.innerHTML = reports.map((r) => `
-        <tr>
-          <td><code>${esc(String(r.id).slice(0, 8))}...</code></td>
-          <td>${esc(formatDateDisplay(r.week_start_date))} to ${esc(formatDateDisplay(r.week_end_date))}</td>
-          <td>PKR ${(Number(r.total_amount_paisa) / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-          <td>${pill(r.status)}</td>
-          <td>
-            <button type="button" class="btn btn-primary btn-sm" onclick="approveReport('${esc(r.id)}')">Approve &amp; Freeze</button>
-            <button type="button" class="btn btn-outline btn-sm btn-decline" onclick="returnReport('${esc(r.id)}')">Return</button>
-          </td>
-        </tr>
-      `).join('');
-    } else if (res.status !== 403) {
+  const allReports = await safeJson(res);
+  const reports = allReports.filter((r) => r.status === 'SUBMITTED' || r.status === 'RESUBMITTED');
+  if (reports.length === 0) {
+    tbody.innerHTML = emptyRow(5, 'No reports currently awaiting review.');
+    return;
+  }
+  tbody.innerHTML = reports.map((r) => `
+    <tr>
+      <td><code>${esc(String(r.id).slice(0, 8))}...</code></td>
+      <td>${esc(formatDateDisplay(r.week_start_date))} to ${esc(formatDateDisplay(r.week_end_date))}</td>
+      <td>PKR ${(Number(r.total_amount_paisa) / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+      <td>${pill(r.status)}</td>
+      <td>
+        <button type="button" class="btn btn-primary btn-sm" onclick="approveReport('${esc(r.id)}')">Approve &amp; Freeze</button>
+        <button type="button" class="btn btn-outline btn-sm btn-decline" onclick="returnReport('${esc(r.id)}')">Return</button>
+      </td>
+    </tr>
+  `).join('');
+} else if (res.status !== 403) {
       tbody.innerHTML = failedRow(5);
     }
   } catch (err) {
