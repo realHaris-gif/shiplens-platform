@@ -2,67 +2,55 @@ import { Router } from 'express';
 import { ReportController } from '../controllers/report.controller';
 import { authenticate, requireRoles } from '../middleware/auth.middleware';
 import { Role } from '../types';
-import { PdfService } from '../services/pdf.service';
-import { ownBranchOrNull, listScope } from '../middleware/scope';
+import { P } from '../config/permissions';
 
 const router = Router();
 
+router.use(authenticate);
 
-router.get('/export/pdf', authenticate, async (req, res, next) => {
-  try {
-    const scope = listScope(req);
-    const pdfBuffer = await PdfService.generateReportsPdf(scope);
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=shiplens-reports-${Date.now()}.pdf`);
-    res.send(pdfBuffer);
-  } catch (err) {
-    next(err);
-  }
-});
-// Draft and submit reports
+// 1. Specific export routes (MUST come before /:id)
+router.get(
+  '/export/csv',
+  requireRoles(P('reports.csv') as Role[]),
+  ReportController.exportCsv
+);
+
+router.get(
+  '/export/pdf',
+  requireRoles(P('reports.pdf') as Role[]),
+  ReportController.exportPdf
+);
+
+// 2. Collection routes (relative to /reports mount)
 router.post(
-  '/reports',
-  authenticate,
-  requireRoles([Role.BRANCH_LEAD, Role.SUPER_ADMIN]),
+  '/',
+  requireRoles(P('reports.create') as Role[]),
   ReportController.createDraft
 );
 
+router.get(
+  '/',
+  requireRoles(P('reports.list') as Role[]),
+  ReportController.list
+);
+
+// 3. Dynamic parameterized routes (:id)
 router.patch(
-  '/reports/:id/submit',
-  authenticate,
-  requireRoles([Role.BRANCH_LEAD, Role.SUPER_ADMIN]),
+  '/:id/submit',
+  requireRoles(P('reports.submit') as Role[]),
   ReportController.submit
 );
 
-// Review and approve (Finance / Admin)
 router.patch(
-  '/reports/:id/approve',
-  authenticate,
-  requireRoles([Role.SUPER_ADMIN, Role.FINANCE_REVIEWER]),
+  '/:id/approve',
+  requireRoles(P('reports.approve') as Role[]),
   ReportController.approve
 );
 
 router.patch(
-  '/reports/:id/return',
-  authenticate,
-  requireRoles([Role.SUPER_ADMIN, Role.FINANCE_REVIEWER]),
+  '/:id/return',
+  requireRoles(P('reports.return') as Role[]),
   ReportController.returnReport
-);
-
-// CSV Export with formula injection protection
-router.get(
-  '/reports/export/csv',
-  authenticate,
-  requireRoles([Role.SUPER_ADMIN, Role.FINANCE_REVIEWER, Role.BRANCH_LEAD]),
-  ReportController.exportCsv
-);
-
-// List reports
-router.get(
-  '/reports',
-  authenticate,
-  requireRoles([Role.SUPER_ADMIN, Role.FINANCE_REVIEWER, Role.BRANCH_LEAD]),
-  ReportController.list
 );
 
 export default router;

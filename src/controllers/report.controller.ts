@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
 import { ReportService } from '../services/report.service';
 import { scopedBranchId, ScopeError } from '../middleware/scope';
+import PDFDocument from 'pdfkit';
 
 export class ReportController {
   static async createDraft(req: AuthenticatedRequest, res: Response) {
@@ -122,11 +123,21 @@ export class ReportController {
     }
 
     try {
+      const rawStatus = req.query.status as string | undefined;
+      // Handle comma-separated filter: "SUBMITTED,RESUBMITTED"
+      const statusArray = rawStatus ? rawStatus.split(',').map((s) => s.trim()) : undefined;
+
       const reports = await ReportService.listReports({
         branchId: branchScope,
-        status: req.query.status as string | undefined,
+        status: statusArray ? (statusArray.length === 1 ? statusArray[0] : undefined) : undefined,
       });
-      return res.status(200).json(reports);
+
+      // In-memory filter fallback to guarantee comma-separated queries always resolve correctly
+      const filtered = statusArray && statusArray.length > 1
+        ? reports.filter((r: any) => statusArray.includes(r.status))
+        : reports;
+
+      return res.status(200).json(filtered);
     } catch (error: any) {
       return res.status(500).json({ error: error.message });
     }
@@ -149,12 +160,9 @@ export class ReportController {
       const sanitizeCell = (value: any): string => {
         if (value === null || value === undefined) return '""';
         let str = String(value);
-
-        // Neutralize executable formula injection triggers (=, +, -, @, \t, \r)
         if (/^[=+\-@\t\r]/.test(str)) {
           str = `'${str}`;
         }
-
         return `"${str.replace(/"/g, '""')}"`;
       };
 
@@ -200,6 +208,87 @@ export class ReportController {
       return res.status(200).send(csvData);
     } catch (error: any) {
       return res.status(500).json({ error: error.message });
+    }
+  }
+
+  static async exportPdf(req: AuthenticatedRequest, res: Response) {
+    let branchScope: string | null = null;
+    try {
+      branchScope = scopedBranchId(req);
+    } catch (err: any) {
+      return res.status(err instanceof ScopeError ? err.statusCode : 403).json({ error: err.message });
+    }
+
+    try {
+      const reports = await ReportService.listReports({
+        branchId: branchScope,
+        status: req.query.status as string | undefined,
+      });
+
+      const doc = new PDFDocument({ margin: 40, size: 'A4' });
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="shiplens-audit-${new Date().toISOString().split('T')[0]}.pdf"`
+      );
+
+      doc.pipe(res);
+
+      // Header
+      doc.fontSize(18).font('Helvetica-Bold').text('ShipLens — Executive Audit Report', { align: 'center' });
+      doc.moveDown(0.3);
+      doc.fontSize(9).font('Helvetica').fillColor('#555555').text(`Generated: ${new Date().toUTCString()}`, { align: 'center' });
+      doc.moveDown(1.2);
+
+      // Aggregate Stats
+      const totalPaisa = reports.reduce((acc: number, r: any) => acc + Number(r.total_amount_paisa || 0), 0);
+      const totalPkrFormatted = (totalPaisa / 100).toLocaleString('en-US', { minimumFractionDigits: 2 });
+
+      doc.fillColor('#000000').fontSize(10).font('Helvetica-Bold').text(
+        `Total Reports: ${reports.length}   |   Aggregated Volume: PKR ${totalPkrFormatted}`
+      );
+      doc.moveDown(0.8);
+
+      // Table Header
+      const tableTop = doc.y;
+      doc.fontSize(9).font('Helvetica-Bold');
+      doc.text('Report ID', 40, tableTop, { width: 120 });
+      doc.text('Period', 170, tableTop, { width: 140 });
+      doc.text('Amount (PKR)', 320, tableTop, { width: 100, align: 'right' });
+      doc.text('Status', 440, tableTop, { width: 80, align: 'center' });
+
+      doc.moveTo(40, tableTop + 13).lineTo(540, tableTop + 13).strokeColor('#aaaaaa').stroke();
+
+      // Rows
+      let y = tableTop + 18;
+      doc.font('Helvetica').fontSize(8.5);
+
+      for (const r of reports) {
+        if (y > 750) {
+          doc.addPage();
+          y = 45;
+        }
+
+        const pkr = (Number(r.total_amount_paisa || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2 });
+        const startStr = String(r.week_start_date || '').slice(0, 10);
+        const endStr = String(r.week_end_date || '').slice(0, 10);
+
+        doc.fillColor('#111111');
+        doc.text(String(r.id).slice(0, 18), 40, y, { width: 120 });
+        doc.text(`${startStr} to ${endStr}`, 170, y, { width: 140 });
+        doc.text(pkr, 320, y, { width: 100, align: 'right' });
+        doc.text(String(r.status || ''), 440, y, { width: 80, align: 'center' });
+
+        y += 16;
+      }
+
+      doc.end();
+    } catch (error: any) {
+      console.error('PDF generation error:', error);
+      if (!res.headersSent) {
+        return res.status(500).json({ error: 'Failed to generate PDF audit report' });
+      }
     }
   }
 }
