@@ -2,7 +2,16 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
 import { ReportService } from '../services/report.service';
 import { scopedBranchId, ScopeError } from '../middleware/scope';
+import { Role } from '../types';
 import PDFDocument from 'pdfkit';
+
+function getSafeBranchScope(req: AuthenticatedRequest): string | null {
+  // Super Admin and Finance Reviewer have nationwide scope across all branches
+  if (req.user?.role === Role.SUPER_ADMIN || req.user?.role === Role.FINANCE_REVIEWER) {
+    return null;
+  }
+  return scopedBranchId(req);
+}
 
 export class ReportController {
   static async createDraft(req: AuthenticatedRequest, res: Response) {
@@ -14,7 +23,7 @@ export class ReportController {
 
     let branchScope: string | null = null;
     try {
-      branchScope = scopedBranchId(req);
+      branchScope = getSafeBranchScope(req);
     } catch (err: any) {
       return res.status(err instanceof ScopeError ? err.statusCode : 403).json({ error: err.message });
     }
@@ -41,7 +50,7 @@ export class ReportController {
 
     let branchScope: string | null = null;
     try {
-      branchScope = scopedBranchId(req);
+      branchScope = getSafeBranchScope(req);
     } catch (err: any) {
       return res.status(err instanceof ScopeError ? err.statusCode : 403).json({ error: err.message });
     }
@@ -65,7 +74,7 @@ export class ReportController {
 
     let branchScope: string | null = null;
     try {
-      branchScope = scopedBranchId(req);
+      branchScope = getSafeBranchScope(req);
     } catch (err: any) {
       return res.status(err instanceof ScopeError ? err.statusCode : 403).json({ error: err.message });
     }
@@ -94,7 +103,7 @@ export class ReportController {
 
     let branchScope: string | null = null;
     try {
-      branchScope = scopedBranchId(req);
+      branchScope = getSafeBranchScope(req);
     } catch (err: any) {
       return res.status(err instanceof ScopeError ? err.statusCode : 403).json({ error: err.message });
     }
@@ -117,24 +126,22 @@ export class ReportController {
   static async list(req: AuthenticatedRequest, res: Response) {
     let branchScope: string | null = null;
     try {
-      branchScope = scopedBranchId(req);
+      branchScope = getSafeBranchScope(req);
     } catch (err: any) {
       return res.status(err instanceof ScopeError ? err.statusCode : 403).json({ error: err.message });
     }
 
     try {
       const rawStatus = req.query.status as string | undefined;
-      // Handle comma-separated filter: "SUBMITTED,RESUBMITTED"
-      const statusArray = rawStatus ? rawStatus.split(',').map((s) => s.trim()) : undefined;
+      const statusList = rawStatus ? rawStatus.split(',').map((s) => s.trim()) : undefined;
 
       const reports = await ReportService.listReports({
         branchId: branchScope,
-        status: statusArray ? (statusArray.length === 1 ? statusArray[0] : undefined) : undefined,
+        status: statusList && statusList.length === 1 ? statusList[0] : undefined,
       });
 
-      // In-memory filter fallback to guarantee comma-separated queries always resolve correctly
-      const filtered = statusArray && statusArray.length > 1
-        ? reports.filter((r: any) => statusArray.includes(r.status))
+      const filtered = statusList && statusList.length > 1
+        ? reports.filter((r: any) => statusList.includes(r.status))
         : reports;
 
       return res.status(200).json(filtered);
@@ -146,7 +153,7 @@ export class ReportController {
   static async exportCsv(req: AuthenticatedRequest, res: Response) {
     let branchScope: string | null = null;
     try {
-      branchScope = scopedBranchId(req);
+      branchScope = getSafeBranchScope(req);
     } catch (err: any) {
       return res.status(err instanceof ScopeError ? err.statusCode : 403).json({ error: err.message });
     }
@@ -198,14 +205,12 @@ export class ReportController {
         csvRows.push(row.join(','));
       }
 
-      const csvData = csvRows.join('\r\n');
-
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
       res.setHeader(
         'Content-Disposition',
         `attachment; filename="shiplens-reports-${new Date().toISOString().split('T')[0]}.csv"`
       );
-      return res.status(200).send(csvData);
+      return res.status(200).send(csvRows.join('\r\n'));
     } catch (error: any) {
       return res.status(500).json({ error: error.message });
     }
@@ -214,7 +219,7 @@ export class ReportController {
   static async exportPdf(req: AuthenticatedRequest, res: Response) {
     let branchScope: string | null = null;
     try {
-      branchScope = scopedBranchId(req);
+      branchScope = getSafeBranchScope(req);
     } catch (err: any) {
       return res.status(err instanceof ScopeError ? err.statusCode : 403).json({ error: err.message });
     }
@@ -230,23 +235,23 @@ export class ReportController {
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader(
         'Content-Disposition',
-        `attachment; filename="shiplens-audit-${new Date().toISOString().split('T')[0]}.pdf"`
+        `attachment; filename="shiplens-reports-${new Date().toISOString().split('T')[0]}.pdf"`
       );
 
       doc.pipe(res);
 
-      // Header
-      doc.fontSize(18).font('Helvetica-Bold').text('ShipLens — Executive Audit Report', { align: 'center' });
+      // PDF Title
+      doc.fontSize(18).font('Helvetica-Bold').text('ShipLens Executive Audit Report', { align: 'center' });
       doc.moveDown(0.3);
       doc.fontSize(9).font('Helvetica').fillColor('#555555').text(`Generated: ${new Date().toUTCString()}`, { align: 'center' });
       doc.moveDown(1.2);
 
-      // Aggregate Stats
+      // Summary
       const totalPaisa = reports.reduce((acc: number, r: any) => acc + Number(r.total_amount_paisa || 0), 0);
-      const totalPkrFormatted = (totalPaisa / 100).toLocaleString('en-US', { minimumFractionDigits: 2 });
+      const totalPkr = (totalPaisa / 100).toLocaleString('en-US', { minimumFractionDigits: 2 });
 
       doc.fillColor('#000000').fontSize(10).font('Helvetica-Bold').text(
-        `Total Reports: ${reports.length}   |   Aggregated Volume: PKR ${totalPkrFormatted}`
+        `Total Reports: ${reports.length}   |   Aggregated Volume: PKR ${totalPkr}`
       );
       doc.moveDown(0.8);
 
@@ -260,7 +265,7 @@ export class ReportController {
 
       doc.moveTo(40, tableTop + 13).lineTo(540, tableTop + 13).strokeColor('#aaaaaa').stroke();
 
-      // Rows
+      // Table Rows
       let y = tableTop + 18;
       doc.font('Helvetica').fontSize(8.5);
 

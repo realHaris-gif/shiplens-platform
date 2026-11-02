@@ -2,54 +2,54 @@ import { Router } from 'express';
 import { ReportController } from '../controllers/report.controller';
 import { authenticate, requireRoles } from '../middleware/auth.middleware';
 import { Role } from '../types';
-import { P } from '../config/permissions';
 
 const router = Router();
 
+// Apply authentication to all report endpoints
 router.use(authenticate);
 
-// 1. Specific export routes (MUST come before /:id)
+// 1. Specific export endpoints (Placed FIRST so ':id' never intercepts them)
 router.get(
-  '/export/csv',
-  requireRoles(P('reports.csv') as Role[]),
+  '/reports/export/csv',
+  requireRoles([Role.SUPER_ADMIN, Role.FINANCE_REVIEWER, Role.BRANCH_LEAD]),
   ReportController.exportCsv
 );
 
 router.get(
-  '/export/pdf',
-  requireRoles(P('reports.pdf') as Role[]),
+  '/reports/export/pdf',
+  requireRoles([Role.SUPER_ADMIN, Role.FINANCE_REVIEWER, Role.BRANCH_LEAD]),
   ReportController.exportPdf
 );
 
-// 2. Collection routes (relative to /reports mount)
+// 2. Collection endpoints
 router.post(
-  '/',
-  requireRoles(P('reports.create') as Role[]),
+  '/reports',
+  requireRoles([Role.BRANCH_LEAD, Role.SUPER_ADMIN]),
   ReportController.createDraft
 );
 
 router.get(
-  '/',
-  requireRoles(P('reports.list') as Role[]),
+  '/reports',
+  requireRoles([Role.SUPER_ADMIN, Role.FINANCE_REVIEWER, Role.BRANCH_LEAD]),
   ReportController.list
 );
 
-// 3. Dynamic parameterized routes (:id)
+// 3. Dynamic parameter endpoints
 router.patch(
-  '/:id/submit',
-  requireRoles(P('reports.submit') as Role[]),
+  '/reports/:id/submit',
+  requireRoles([Role.BRANCH_LEAD, Role.SUPER_ADMIN]),
   ReportController.submit
 );
 
 router.patch(
-  '/:id/approve',
-  requireRoles(P('reports.approve') as Role[]),
+  '/reports/:id/approve',
+  requireRoles([Role.SUPER_ADMIN, Role.FINANCE_REVIEWER]),
   ReportController.approve
 );
 
 router.patch(
-  '/:id/return',
-  requireRoles(P('reports.return') as Role[]),
+  '/reports/:id/return',
+  requireRoles([Role.SUPER_ADMIN, Role.FINANCE_REVIEWER]),
   ReportController.returnReport
 );
 
