@@ -5,18 +5,17 @@ import { pool } from './config/db';
 import { globalLimiter } from './middleware/rateLimiter';
 
 // Route handlers
+import contentRoutes from './routes/content.routes';
 import authRoutes from './routes/auth.routes';
 import branchRoutes from './routes/branch.routes';
 import memberRoutes from './routes/member.routes';
 import collectionRoutes from './routes/collection.routes';
 import reportRoutes from './routes/report.routes';
-import contentRoutes from './routes/content.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import userRoutes from './routes/user.routes';
 import auditRoutes from './routes/audit.routes';
 import { ContactController } from './controllers/contact.controller';
 import { errorHandler } from './middleware/error';
-
 
 const app: Application = express();
 app.set('trust proxy', 1);
@@ -65,18 +64,19 @@ app.get('/health', async (_req: Request, res: Response) => {
   }
 });
 
-// API Route Modules
+// Explicit Public Endpoints & Routes (Mounted First)
+app.use(contentRoutes);
+app.post('/contact', ContactController.submit);
+
+// Authenticated / Role-Restricted Route Modules
 app.use(authRoutes);
 app.use(branchRoutes);
 app.use(memberRoutes);
 app.use(collectionRoutes);
 app.use(reportRoutes);
-app.use(contentRoutes);
 app.use(dashboardRoutes);
 app.use(userRoutes);
 app.use(auditRoutes);
-app.post('/contact', ContactController.submit);
-app.use(errorHandler);
 
 // Explicit Root Route
 app.get('/', (_req: Request, res: Response) => {
@@ -97,21 +97,7 @@ app.use((_req: Request, res: Response) => {
   res.status(404).json({ error: 'Endpoint not found' });
 });
 
-// Central Error Handler
-app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-  const status = err.statusCode || 500;
-  const message = (process.env.NODE_ENV === 'production' && status === 500)
-    ? 'Internal server error'
-    : err.message || 'An unexpected error occurred';
-
-  if (status >= 500) {
-    console.error('Server Exception:', err);
-  }
-
-  res.status(status).json({
-    error: err.name || 'Error',
-    message,
-  });
-});
+// Central Error Handler (Terminal middleware)
+app.use(errorHandler);
 
 export default app;

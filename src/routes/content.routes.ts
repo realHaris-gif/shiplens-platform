@@ -5,10 +5,12 @@ import { Role } from '../types';
 
 const router = Router();
 
-// Public: View published articles & announcements
-router.get('/content', ContentController.getPublic);
 
-// Protected: Content Editor / Super Admin management
+router.get('/content', (req, res, next) => {
+  return ContentController.getPublic(req, res).catch(next);
+});
+
+
 router.get(
   '/admin/content',
   authenticate,
