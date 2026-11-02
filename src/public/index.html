@@ -6,19 +6,30 @@
   <meta name="description" content="ShipLens connects regional branches across Pakistan with centralized financial auditing, immutable logging, and volunteer management.">
   <meta name="theme-color" content="#07060d">
   <meta name="color-scheme" content="dark light">
-  <!-- Apply saved theme before first paint (no flash) -->
-  <script>try{var t=localStorage.getItem("shiplens_theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);if(t==="light")document.querySelector('meta[name="theme-color"]').setAttribute("content","#F8FAFC")}catch(e){}</script>
-  <title>ShipLens — Operational &amp; Governance Platform</title>
+  <!-- Apply saved theme & language before first paint to prevent layout flash -->
+  <script>
+    try {
+      var t = localStorage.getItem("shiplens_theme");
+      if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+      if (t === "light") document.querySelector('meta[name="theme-color"]').setAttribute("content", "#F8FAFC");
+      var l = localStorage.getItem("shiplens_lang");
+      if (l === "ur") {
+        document.documentElement.setAttribute("lang", "ur");
+        document.documentElement.setAttribute("dir", "rtl");
+      }
+    } catch(e) {}
+  </script>
+  <title data-i18n="meta.title">ShipLens — Operational &amp; Governance Platform</title>
   <link rel="icon" href="/image_3.jpg">
 
-  <!-- Fonts -->
+  <!-- Typography: Inter, Plus Jakarta Sans, Instrument Serif, JetBrains Mono, Noto Nastaliq Urdu -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@500&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@500&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Noto+Nastaliq+Urdu:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
-  <a class="skip-link" href="#main">Skip to content</a>
+  <a class="skip-link" href="#main" data-i18n="skip_to_content">Skip to content</a>
 
   <!-- Shared SVG filter for the liquid loader -->
   <svg width="0" height="0" style="position:absolute;visibility:hidden" aria-hidden="true" focusable="false">
@@ -59,11 +70,11 @@
         <path d="M60 22a34 34 0 0 1 48 0M70 31a20 20 0 0 1 28 0" opacity=".35"/>
         <circle cx="84" cy="38" r="1.6" fill="currentColor" stroke="none" opacity=".5"/>
       </svg>
-      <h2 id="offline-title">Connection <em>Interrupted</em></h2>
-      <p id="offline-desc">ShipLens cannot reach the central ledger node. Reconnecting automatically...</p>
+      <h2 id="offline-title" data-i18n="offline_title">Connection <em>Interrupted</em></h2>
+      <p id="offline-desc" data-i18n="offline_desc">ShipLens cannot reach the central ledger node. Reconnecting automatically...</p>
       <button type="button" id="offline-retry" class="btn btn-glass">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4.5V11h-6.5"/></svg>
-        <span id="offline-retry-label">Retry Handshake</span>
+        <span id="offline-retry-label" data-i18n="offline_retry">Retry Handshake</span>
       </button>
     </div>
   </div>
@@ -103,7 +114,7 @@
       </div>
       <div id="user-profile" class="hidden">
         <span id="user-role-badge" class="role-badge"></span>
-        <span id="user-email-display"></span>
+        <span id="user-email-display" dir="ltr"></span>
         <button type="button" class="btn btn-outline" onclick="logout()" data-i18n="nav_logout">Sign Out</button>
       </div>
     </div>
@@ -115,7 +126,7 @@
     <!-- PAGE 1: HOME -->
     <section id="view-home" class="view">
       <div class="hero">
-        <h1 data-i18n="hero_title" data-accent-tail="2">Decentralized Governance &amp; <em>Operational Integrity</em></h1>
+        <h1 data-i18n="hero_title">Decentralized Governance &amp; <em>Operational Integrity</em></h1>
         <p data-i18n="hero_desc">ShipLens connects regional branches across Pakistan with centralized financial auditing, immutable logging, and volunteer management.</p>
         <div class="hero-actions">
           <button type="button" class="btn btn-primary" onclick="navigateTo('get-involved')" data-i18n="hero_btn_volunteer">Join as a Volunteer</button>
@@ -128,29 +139,29 @@
           <div class="feature-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 4.5 3.2 7.8 8 9 4.8-1.2 8-4.5 8-9V6l-8-3z"/><path d="m9 12 2 2 4-4"/></svg>
           </div>
-          <h3>Immutable Financial <em>Auditing</em></h3>
-          <p>Integer paisa-precision ledgers, weekly snapshot freezing, and append-only database logs guarantee zero tampering across every regional branch.</p>
+          <h3 data-i18n="feat_1_title">Immutable Financial <em>Auditing</em></h3>
+          <p data-i18n="feat_1_desc">Integer paisa-precision ledgers, weekly snapshot freezing, and append-only database logs guarantee zero tampering across every regional branch.</p>
         </div>
         <div class="card">
           <div class="feature-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.3 3.2-5.5 6.5-5.5s5.9 2.2 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.8c2 .7 3.2 2.5 3.5 5.2"/></svg>
           </div>
-          <h3>Volunteer to Member Pipeline</h3>
-          <p>Structured intake workflow transforming community applicants into verified operational members with sequential identifier minting.</p>
+          <h3 data-i18n="feat_2_title">Volunteer to Member Pipeline</h3>
+          <p data-i18n="feat_2_desc">Structured intake workflow transforming community applicants into verified operational members with sequential identifier minting.</p>
         </div>
         <div class="card">
           <div class="feature-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/></svg>
           </div>
-          <h3>Nationwide Transparency</h3>
-          <p>Dual-language Urdu and English support empowering field operatives in Lahore, Karachi, and Islamabad with unified reporting.</p>
+          <h3 data-i18n="feat_3_title">Nationwide Transparency</h3>
+          <p data-i18n="feat_3_desc">Dual-language Urdu and English support empowering field operatives in Lahore, Karachi, and Islamabad with unified reporting.</p>
         </div>
       </div>
 
       <!-- Published Announcements Dynamic Feed -->
       <div class="card mt-4">
-        <h3>Live Organization Bulletins</h3>
-        <p class="subtitle">Direct operational updates managed by our Communications Office.</p>
+        <h3 data-i18n="bulletins_title">Live Organization Bulletins</h3>
+        <p class="subtitle" data-i18n="bulletins_subtitle">Direct operational updates managed by our Communications Office.</p>
         <div id="home-bulletins-list" aria-busy="true">
           <div class="skeleton-block" aria-hidden="true">
             <div class="skeleton-item"><span class="skeleton skeleton-title"></span><span class="skeleton skeleton-line"></span><span class="skeleton skeleton-line"></span></div>
@@ -164,17 +175,17 @@
     <!-- PAGE 2: ABOUT -->
     <section id="view-about" class="view hidden">
       <div class="hero">
-        <h1>About ShipLens <em>Organization</em></h1>
-        <p>Building resilient, transparent community infrastructure through technology-driven accountability.</p>
+        <h1 data-i18n="about_title">About ShipLens <em>Organization</em></h1>
+        <p data-i18n="about_subtitle">Building resilient, transparent community infrastructure through technology-driven accountability.</p>
       </div>
       <div class="card rows">
         <div class="row">
-          <h3>Our Mission</h3>
-          <p>ShipLens was founded to eliminate operational friction and financial ambiguity in distributed non-profit networks. By transitioning from vulnerable paper receipts and spreadsheets to cryptographic audit trails, we ensure that every rupee collected in the field directly serves its intended civic purpose.</p>
+          <h3 data-i18n="mission_title">Our Mission</h3>
+          <p data-i18n="mission_desc">ShipLens was founded to eliminate operational friction and financial ambiguity in distributed non-profit networks. By transitioning from vulnerable paper receipts and spreadsheets to cryptographic audit trails, we ensure that every rupee collected in the field directly serves its intended civic purpose.</p>
         </div>
         <div class="row">
-          <h3>Governance Structure</h3>
-          <p>Our organization is structured across semi-autonomous regional branches supervised by an executive Head Office. Regional leads collect dues and run field activities, while centralized Finance Reviewers audit weekly submissions before funds are remitted to main accounts.</p>
+          <h3 data-i18n="governance_title">Governance Structure</h3>
+          <p data-i18n="governance_desc">Our organization is structured across semi-autonomous regional branches supervised by an executive Head Office. Regional leads collect dues and run field activities, while centralized Finance Reviewers audit weekly submissions before funds are remitted to main accounts.</p>
         </div>
       </div>
     </section>
@@ -182,24 +193,13 @@
     <!-- PAGE 3: PROGRAMS -->
     <section id="view-programs" class="view hidden">
       <div class="hero">
-        <h1>Active <em>Civic Programs</em></h1>
-        <p>Strategic initiatives deployed across our Pakistani branch network.</p>
+        <h1 data-i18n="programs_title">Active <em>Civic Programs</em></h1>
+        <p data-i18n="programs_subtitle">Strategic initiatives deployed across our Pakistani branch network.</p>
       </div>
-      <div class="card rows programs">
-        <div class="row">
-          <span class="role-badge">Education</span>
-          <h3>Community Literacy Circles</h3>
-          <p>Weekend tutoring and foundational literacy programs conducted by verified ShipLens members in under-resourced public schools.</p>
-        </div>
-        <div class="row">
-          <span class="role-badge">Relief</span>
-          <h3>Rapid Emergency Logistics</h3>
-          <p>Pre-positioned dry rations and basic medicine supply chains managed through localized volunteer chapters during monsoon emergencies.</p>
-        </div>
-        <div class="row">
-          <span class="role-badge">Youth</span>
-          <h3>Technical Skills Bootcamps</h3>
-          <p>Vocational training workshops covering basic computing, web literacy, and digital accounting for youth volunteers.</p>
+      <div class="card rows programs" id="programs-cards-container">
+        <div class="skeleton-block" aria-hidden="true">
+          <div class="skeleton-item"><span class="skeleton skeleton-title"></span><span class="skeleton skeleton-line"></span></div>
+          <div class="skeleton-item"><span class="skeleton skeleton-title"></span><span class="skeleton skeleton-line"></span></div>
         </div>
       </div>
     </section>
@@ -207,18 +207,18 @@
     <!-- PAGE 4: BRANCHES -->
     <section id="view-branches" class="view hidden">
       <div class="hero">
-        <h1>Regional <em>Branch Directory</em></h1>
-        <p>Active physical headquarters operating across Pakistan.</p>
+        <h1 data-i18n="branches_title">Regional <em>Branch Directory</em></h1>
+        <p data-i18n="branches_subtitle">Active physical headquarters operating across Pakistan.</p>
       </div>
       <div class="card">
         <div class="table-responsive">
           <table class="data-table" id="public-branches-table">
             <thead>
               <tr>
-                <th>Branch Code</th>
-                <th>Branch Name</th>
-                <th>City</th>
-                <th>Operational Status</th>
+                <th data-i18n="th_branch_code">Branch Code</th>
+                <th data-i18n="th_branch_name">Branch Name</th>
+                <th data-i18n="th_city">City</th>
+                <th data-i18n="th_op_status">Operational Status</th>
               </tr>
             </thead>
             <tbody>
@@ -234,27 +234,13 @@
     <!-- PAGE 5: EVENTS -->
     <section id="view-events" class="view hidden">
       <div class="hero">
-        <h1>Upcoming <em>Community Events</em></h1>
-        <p>Participate in regional summits, volunteer training, and public audits.</p>
+        <h1 data-i18n="events_title">Upcoming <em>Community Events</em></h1>
+        <p data-i18n="events_subtitle">Participate in regional summits, volunteer training, and public audits.</p>
       </div>
-      <div class="grid-2">
-        <div class="card">
-          <span class="role-badge">Annual Summit</span>
-          <h3 class="event-title">2026 Nationwide Governance Forum</h3>
-          <dl class="meta">
-            <dt>Date</dt><dd>November 15, 2026</dd>
-            <dt>Location</dt><dd>Islamabad Central Auditorium</dd>
-          </dl>
-          <p>A convene of branch leadership and civil society reviewers reviewing annual transparency reports and field audit results.</p>
-        </div>
-        <div class="card">
-          <span class="role-badge">Field Training</span>
-          <h3 class="event-title">Volunteer Intake &amp; Field Readiness</h3>
-          <dl class="meta">
-            <dt>Date</dt><dd>Every Saturday</dd>
-            <dt>Location</dt><dd>Local Branch Offices</dd>
-          </dl>
-          <p>Orientation and integrity training for recently minted members who have transitioned through the HR review process.</p>
+      <div class="grid-2" id="events-cards-container">
+        <div class="skeleton-block" aria-hidden="true">
+          <div class="skeleton-item"><span class="skeleton skeleton-title"></span><span class="skeleton skeleton-line"></span></div>
+          <div class="skeleton-item"><span class="skeleton skeleton-title"></span><span class="skeleton skeleton-line"></span></div>
         </div>
       </div>
     </section>
@@ -263,7 +249,7 @@
     <section id="view-get-involved" class="view hidden">
       <div class="split">
         <div class="hero">
-          <h1 data-i18n="form_title" data-accent-tail="1">Volunteer <em>Application</em></h1>
+          <h1 data-i18n="form_title">Volunteer <em>Application</em></h1>
           <p class="subtitle" data-i18n="form_subtitle">Join our nationwide branch network in making an operational impact.</p>
         </div>
 
@@ -273,17 +259,17 @@
           <form id="volunteer-form" onsubmit="handleVolunteerSubmit(event)">
             <div class="form-group">
               <label for="fullName" data-i18n="label_name">Full Name</label>
-              <input type="text" id="fullName" name="name" autocomplete="name" required placeholder="e.g. Muhammad Haris">
+              <input type="text" id="fullName" name="name" autocomplete="name" required placeholder="e.g. Muhammad Haris" data-i18n-placeholder="ph_name">
             </div>
 
             <div class="form-row">
               <div class="form-group">
                 <label for="email" data-i18n="label_email">Email Address</label>
-                <input type="email" id="email" name="email" autocomplete="email" required placeholder="name@example.com">
+                <input type="email" id="email" name="email" autocomplete="email" required placeholder="name@example.com" dir="ltr">
               </div>
               <div class="form-group">
                 <label for="phone" data-i18n="label_phone">Phone Number</label>
-                <input type="tel" id="phone" name="phone" autocomplete="tel" required placeholder="+92 300 1234567">
+                <input type="tel" id="phone" name="phone" autocomplete="tel" required placeholder="+92 300 1234567" dir="ltr">
               </div>
             </div>
 
@@ -296,7 +282,7 @@
 
             <div class="form-group">
               <label for="notes" data-i18n="label_notes">Statement of Intent / Skills</label>
-              <textarea id="notes" rows="3" placeholder="Tell us about your background..."></textarea>
+              <textarea id="notes" rows="3" placeholder="Tell us about your background..." data-i18n-placeholder="ph_notes"></textarea>
             </div>
 
             <button type="submit" class="btn btn-primary btn-block" data-i18n="btn_submit_app">Submit Volunteer Application</button>
@@ -308,35 +294,35 @@
     <!-- PAGE 7: CONTACT -->
     <section id="view-contact" class="view hidden">
       <div class="hero">
-        <h1>Contact &amp; <em>Head Office</em></h1>
-        <p>Get in touch with central secretariat and audit teams.</p>
+        <h1 data-i18n="contact_title">Contact &amp; <em>Head Office</em></h1>
+        <p data-i18n="contact_subtitle">Get in touch with central secretariat and audit teams.</p>
       </div>
       <div class="grid-2">
         <div class="card">
-          <h3>Central Secretariat</h3>
+          <h3 data-i18n="secretariat_title">Central Secretariat</h3>
           <dl class="meta">
-            <dt>Address</dt><dd>ShipLens Secretariat, Sector F-7, Blue Area, Islamabad, Pakistan</dd>
-            <dt>Official Inquiries</dt><dd>contact@shiplens.org</dd>
-            <dt>Whistleblower &amp; Audit Desk</dt><dd>audit@shiplens.org</dd>
-            <dt>Phone</dt><dd>+92 (51) 844-SHIP</dd>
+            <dt data-i18n="lbl_address">Address</dt><dd data-i18n="val_address">ShipLens Secretariat, Sector F-7, Blue Area, Islamabad, Pakistan</dd>
+            <dt data-i18n="lbl_inquiries">Official Inquiries</dt><dd dir="ltr">contact@shiplens.org</dd>
+            <dt data-i18n="lbl_audit_desk">Whistleblower &amp; Audit Desk</dt><dd dir="ltr">audit@shiplens.org</dd>
+            <dt data-i18n="lbl_phone">Phone</dt><dd dir="ltr">+92 (51) 844-SHIP</dd>
           </dl>
         </div>
         <div class="card">
-          <h3>Send Direct Message</h3>
+          <h3 data-i18n="send_message_title">Send Direct Message</h3>
           <form id="contact-form" onsubmit="handleContactSubmit(event)">
             <div class="form-group">
-              <label for="contact-name">Your Name</label>
-              <input type="text" id="contact-name" autocomplete="name" required placeholder="Full Name">
+              <label for="contact-name" data-i18n="label_name">Your Name</label>
+              <input type="text" id="contact-name" autocomplete="name" required placeholder="Full Name" data-i18n-placeholder="ph_name">
             </div>
             <div class="form-group">
-              <label for="contact-email">Email Address</label>
-              <input type="email" id="contact-email" autocomplete="email" required placeholder="name@example.com">
+              <label for="contact-email" data-i18n="label_email">Email Address</label>
+              <input type="email" id="contact-email" autocomplete="email" required placeholder="name@example.com" dir="ltr">
             </div>
             <div class="form-group">
-              <label for="contact-message">Message</label>
-              <textarea id="contact-message" rows="3" required placeholder="Inquiry or operational query..."></textarea>
+              <label for="contact-message" data-i18n="lbl_message">Message</label>
+              <textarea id="contact-message" rows="3" required placeholder="Inquiry or operational query..." data-i18n-placeholder="ph_message"></textarea>
             </div>
-            <button type="submit" class="btn btn-primary">Transmit Message</button>
+            <button type="submit" class="btn btn-primary" data-i18n="btn_transmit_msg">Transmit Message</button>
           </form>
         </div>
       </div>
@@ -347,30 +333,22 @@
       <div class="card form-card login-card">
         <div class="auth-head">
           <img src="/image_3.jpg" alt="ShipLens Logo" class="brand-logo auth-logo" onerror="if(!this.dataset.fb){this.dataset.fb=1;this.src='/logo.png'}else{this.hidden=true}">
-          <h2 data-i18n="login_title" data-accent-tail="1">Staff &amp; Officer <em>Authentication</em></h2>
+          <h2 data-i18n="login_title">Staff &amp; Officer <em>Authentication</em></h2>
           <p class="subtitle" data-i18n="login_subtitle">Enter credentials to access role-authorized operational pipelines.</p>
         </div>
 
         <div id="login-alert" class="alert hidden" role="alert"></div>
 
-        <div id="login-status" class="auth-status hidden" role="status" aria-live="polite">
-          <span class="spinner" aria-hidden="true"></span>
-          <div>
-            <strong id="login-status-title">Authenticating…</strong>
-            <span class="sub" id="login-status-sub">Verifying your credentials securely</span>
-          </div>
-        </div>
-
         <form id="login-form" onsubmit="handleLogin(event)">
           <div class="form-group">
             <label for="login-email" data-i18n="label_email">Corporate Email</label>
-            <input type="email" id="login-email" autocomplete="username" required placeholder="officer@shiplens.org">
+            <input type="email" id="login-email" autocomplete="username" required placeholder="officer@shiplens.org" dir="ltr">
           </div>
 
           <div class="form-group">
             <label for="login-password" data-i18n="label_password">Password</label>
             <div class="input-wrap">
-              <input type="password" id="login-password" autocomplete="current-password" required placeholder="••••••••">
+              <input type="password" id="login-password" autocomplete="current-password" required placeholder="••••••••" dir="ltr">
               <button type="button" class="pw-toggle" data-toggle-password="login-password" aria-label="Show password">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
               </button>
@@ -388,64 +366,63 @@
     <!-- Branch Lead Dashboard -->
     <section id="branch-lead-view" class="view hidden">
       <div class="view-header">
-        <h2>Branch <em>Operations Console</em></h2>
-        <p class="subtitle">Offline Cash Ledger &amp; Weekly Submission Engine</p>
+        <h2 data-i18n="branch_lead_title">Branch <em>Operations Console</em></h2>
+        <p class="subtitle" data-i18n="branch_lead_subtitle">Offline Cash Ledger &amp; Weekly Submission Engine</p>
       </div>
 
       <div class="grid-2">
         <div class="card">
-          <h3>Record Offline Cash Collection</h3>
-          <p class="subtitle">Paisa-precision integer accounting (1 PKR = 100 Paisa)</p>
+          <h3 data-i18n="record_collection_title">Record Offline Cash Collection</h3>
+          <p class="subtitle" data-i18n="record_collection_subtitle">Paisa-precision integer accounting (1 PKR = 100 Paisa)</p>
           <form onsubmit="handleRecordCollection(event)">
             <div class="form-group">
-              <label for="col-amount-pkr">Amount (PKR)</label>
-              <input type="number" id="col-amount-pkr" class="input-amount" step="1" min="1" required placeholder="5000">
+              <label for="col-amount-pkr" data-i18n="lbl_amount_pkr">Amount (PKR)</label>
+              <input type="number" id="col-amount-pkr" class="input-amount" step="1" min="1" required placeholder="5000" dir="ltr">
             </div>
             <div class="form-group">
-              <label for="col-date">Date Collected</label>
-              <input type="date" id="col-date" required>
+              <label for="col-date" data-i18n="lbl_col_date">Date Collected</label>
+              <input type="date" id="col-date" required dir="ltr">
             </div>
-            <button type="submit" class="btn btn-primary">Commit Collection to Ledger</button>
+            <button type="submit" class="btn btn-primary" data-i18n="btn_commit_collection">Commit Collection to Ledger</button>
           </form>
         </div>
 
         <div class="card">
-          <h3>Draft Weekly Branch Report</h3>
-          <p class="subtitle">Aggregates collections and freezes operational metrics</p>
+          <h3 data-i18n="draft_report_title">Draft Weekly Branch Report</h3>
+          <p class="subtitle" data-i18n="draft_report_subtitle">Aggregates collections and freezes operational metrics</p>
           <form onsubmit="handleCreateReport(event)">
             <div class="form-row">
               <div class="form-group">
-                <label for="rep-start">Week Start (Monday)</label>
-                <input type="date" id="rep-start" required>
+                <label for="rep-start" data-i18n="lbl_rep_start">Week Start (Monday)</label>
+                <input type="date" id="rep-start" required dir="ltr">
               </div>
               <div class="form-group">
-                <label for="rep-end">Week End (Sunday)</label>
-                <input type="date" id="rep-end" required>
+                <label for="rep-end" data-i18n="lbl_rep_end">Week End (Sunday)</label>
+                <input type="date" id="rep-end" required dir="ltr">
               </div>
             </div>
             <div class="form-group">
-              <label for="rep-notes">Submission Notes</label>
-              <textarea id="rep-notes" rows="2" placeholder="Weekly operational remarks..."></textarea>
+              <label for="rep-notes" data-i18n="lbl_rep_notes">Submission Notes</label>
+              <textarea id="rep-notes" rows="2" placeholder="Weekly operational remarks..." data-i18n-placeholder="ph_rep_notes"></textarea>
             </div>
-            <button type="submit" class="btn btn-secondary">Compile Draft Report</button>
+            <button type="submit" class="btn btn-secondary" data-i18n="btn_compile_report">Compile Draft Report</button>
           </form>
         </div>
       </div>
 
       <div class="card mt-4">
-        <h3>My Branch Reports</h3>
+        <h3 data-i18n="my_reports_title">My Branch Reports</h3>
         <div class="table-responsive">
           <table class="data-table" id="branch-reports-table">
             <thead>
               <tr>
-                <th>Period</th>
-                <th>Total Collections</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th data-i18n="th_period">Period</th>
+                <th data-i18n="th_total_col">Total Collections</th>
+                <th data-i18n="th_status">Status</th>
+                <th data-i18n="th_actions">Actions</th>
               </tr>
             </thead>
             <tbody>
-              <tr class="skeleton-row" aria-hidden="true"><td colspan="4"><span class="skeleton skeleton-line"></span></td></tr>
               <tr class="skeleton-row" aria-hidden="true"><td colspan="4"><span class="skeleton skeleton-line"></span></td></tr>
               <tr class="skeleton-row" aria-hidden="true"><td colspan="4"><span class="skeleton skeleton-line"></span></td></tr>
             </tbody>
@@ -457,25 +434,24 @@
     <!-- HR Lead Dashboard -->
     <section id="hr-lead-view" class="view hidden">
       <div class="view-header">
-        <h2>Human Resources &amp; <em>Member Intake Pipeline</em></h2>
-        <p class="subtitle">Review volunteer applications and mint atomic member records</p>
+        <h2 data-i18n="hr_view_title">Human Resources &amp; <em>Member Intake Pipeline</em></h2>
+        <p class="subtitle" data-i18n="hr_view_subtitle">Review volunteer applications and mint atomic member records</p>
       </div>
 
       <div class="card">
-        <h3>Pending Volunteer Applications</h3>
+        <h3 data-i18n="pending_apps_title">Pending Volunteer Applications</h3>
         <div class="table-responsive">
           <table class="data-table" id="hr-applications-table">
             <thead>
               <tr>
-                <th>Applicant Name</th>
-                <th>Email</th>
-                <th>Phone</th>
-                <th>Preferred Branch</th>
-                <th>Review Action</th>
+                <th data-i18n="th_applicant_name">Applicant Name</th>
+                <th data-i18n="label_email">Email</th>
+                <th data-i18n="label_phone">Phone</th>
+                <th data-i18n="label_branch">Preferred Branch</th>
+                <th data-i18n="th_review_action">Review Action</th>
               </tr>
             </thead>
             <tbody>
-              <tr class="skeleton-row" aria-hidden="true"><td colspan="5"><span class="skeleton skeleton-line"></span></td></tr>
               <tr class="skeleton-row" aria-hidden="true"><td colspan="5"><span class="skeleton skeleton-line"></span></td></tr>
               <tr class="skeleton-row" aria-hidden="true"><td colspan="5"><span class="skeleton skeleton-line"></span></td></tr>
             </tbody>
@@ -484,20 +460,19 @@
       </div>
 
       <div class="card mt-4">
-        <h3>Active Member Roster</h3>
+        <h3 data-i18n="active_roster_title">Active Member Roster</h3>
         <div class="table-responsive">
           <table class="data-table" id="hr-roster-table">
             <thead>
               <tr>
-                <th>Member Code</th>
-                <th>Full Name</th>
-                <th>Branch</th>
-                <th>Contact</th>
-                <th>Status</th>
+                <th data-i18n="th_member_code">Member Code</th>
+                <th data-i18n="th_full_name">Full Name</th>
+                <th data-i18n="th_branch">Branch</th>
+                <th data-i18n="th_contact">Contact</th>
+                <th data-i18n="th_status">Status</th>
               </tr>
             </thead>
             <tbody>
-              <tr class="skeleton-row" aria-hidden="true"><td colspan="5"><span class="skeleton skeleton-line"></span></td></tr>
               <tr class="skeleton-row" aria-hidden="true"><td colspan="5"><span class="skeleton skeleton-line"></span></td></tr>
               <tr class="skeleton-row" aria-hidden="true"><td colspan="5"><span class="skeleton skeleton-line"></span></td></tr>
             </tbody>
@@ -509,42 +484,42 @@
     <!-- Finance Reviewer & Super Admin Dashboard -->
     <section id="finance-view" class="view hidden">
       <div class="view-header">
-        <h2>Executive Dashboard &amp; <em>Central Audit</em></h2>
-        <p class="subtitle">Nationwide Financial Overview, Frozen Snapshots &amp; Weekly Review Queue</p>
+        <h2 data-i18n="finance_view_title">Executive Dashboard &amp; <em>Central Audit</em></h2>
+        <p class="subtitle" data-i18n="finance_view_subtitle">Nationwide Financial Overview, Frozen Snapshots &amp; Weekly Review Queue</p>
       </div>
 
       <!-- Executive KPI Cards Grid -->
       <div class="grid-3 mb-4" id="dashboard-metrics-grid">
         <div class="card metric-card">
-          <span class="role-badge">Approved Audited</span>
-          <div class="metric-val" id="metric-approved-pkr">PKR 0.00</div>
-          <p class="subtitle" style="margin:0">Permanently frozen &amp; locked</p>
+          <span class="role-badge" data-i18n="badge_approved_audit">Approved Audited</span>
+          <div class="metric-val" id="metric-approved-pkr" dir="ltr">PKR 0.00</div>
+          <p class="subtitle" style="margin:0" data-i18n="sub_frozen_locked">Permanently frozen &amp; locked</p>
         </div>
         <div class="card metric-card">
-          <span class="role-badge" style="color:var(--warn-ink)">Pending Review</span>
-          <div class="metric-val" id="metric-pending-pkr">PKR 0.00</div>
+          <span class="role-badge" style="color:var(--warn-ink)" data-i18n="dash.pending">Pending Review</span>
+          <div class="metric-val" id="metric-pending-pkr" dir="ltr">PKR 0.00</div>
           <p class="subtitle" style="margin:0" id="metric-pending-count">0 reports awaiting review</p>
         </div>
         <div class="card metric-card">
-          <span class="role-badge" style="color:var(--err-ink)">Unrouted Collections</span>
-          <div class="metric-val" id="metric-unrouted-pkr">PKR 0.00</div>
+          <span class="role-badge" style="color:var(--err-ink)" data-i18n="badge_unrouted">Unrouted Collections</span>
+          <div class="metric-val" id="metric-unrouted-pkr" dir="ltr">PKR 0.00</div>
           <p class="subtitle" style="margin:0" id="metric-unrouted-count">0 items not remitted</p>
         </div>
       </div>
 
       <!-- Nationwide Branch Breakdown -->
       <div class="card mb-4">
-        <h3>Regional Branch Financial Status</h3>
+        <h3 data-i18n="regional_branch_status">Regional Branch Financial Status</h3>
         <div class="table-responsive mt-2">
           <table class="data-table" id="dashboard-branches-table">
             <thead>
               <tr>
-                <th>Branch Code</th>
-                <th>Branch Name</th>
-                <th>City</th>
-                <th>Approved Collections</th>
-                <th>Approved Reports</th>
-                <th>Status</th>
+                <th data-i18n="th_branch_code">Branch Code</th>
+                <th data-i18n="th_branch_name">Branch Name</th>
+                <th data-i18n="th_city">City</th>
+                <th data-i18n="th_approved_col">Approved Collections</th>
+                <th data-i18n="th_approved_rep">Approved Reports</th>
+                <th data-i18n="th_status">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -557,22 +532,24 @@
       <!-- Review Queue & Export -->
       <div class="card">
         <div class="card-head">
-          <h3>Pending Weekly Reports for Executive Review</h3>
-          <button type="button" class="btn btn-secondary" onclick="exportReportsCsv()">Export Reports (CSV)</button>
+          <h3 data-i18n="review_queue_title">Pending Weekly Reports for Executive Review</h3>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+            <button type="button" class="btn btn-secondary" onclick="exportReportsCsv()" data-i18n="btn_export_csv">Export CSV</button>
+            <button type="button" class="btn btn-secondary" onclick="exportReportsPdf()" data-i18n="btn_export_pdf">Export PDF</button>
+          </div>
         </div>
         <div class="table-responsive mt-4">
           <table class="data-table" id="finance-reports-table">
             <thead>
               <tr>
-                <th>Report ID</th>
-                <th>Week Period</th>
-                <th>Amount (PKR)</th>
-                <th>Status</th>
-                <th>Review Actions</th>
+                <th data-i18n="th_report_id">Report ID</th>
+                <th data-i18n="th_week_period">Week Period</th>
+                <th data-i18n="th_amount_pkr">Amount (PKR)</th>
+                <th data-i18n="th_status">Status</th>
+                <th data-i18n="th_review_actions">Review Actions</th>
               </tr>
             </thead>
             <tbody>
-              <tr class="skeleton-row" aria-hidden="true"><td colspan="5"><span class="skeleton skeleton-line"></span></td></tr>
               <tr class="skeleton-row" aria-hidden="true"><td colspan="5"><span class="skeleton skeleton-line"></span></td></tr>
               <tr class="skeleton-row" aria-hidden="true"><td colspan="5"><span class="skeleton skeleton-line"></span></td></tr>
             </tbody>
@@ -584,23 +561,23 @@
     <!-- Content Editor Console -->
     <section id="editor-view" class="view hidden">
       <div class="view-header">
-        <h2>Content &amp; <em>Communications Console</em></h2>
-        <p class="subtitle">Draft, update, and publish official bulletins to the public portal</p>
+        <h2 data-i18n="editor_view_title">Content &amp; <em>Communications Console</em></h2>
+        <p class="subtitle" data-i18n="editor_view_subtitle">Draft, update, and publish official bulletins to the public portal</p>
       </div>
 
       <div class="grid-2">
         <div class="card">
-          <h3>Create New Bulletin</h3>
-          <p class="subtitle">Draft announcements, program updates, or event alerts</p>
+          <h3 data-i18n="create_bulletin_title">Create New Bulletin</h3>
+          <p class="subtitle" data-i18n="create_bulletin_subtitle">Draft announcements, program updates, or event alerts</p>
 
           <form id="editor-form" onsubmit="handleCreateContent(event)">
             <div class="form-group">
-              <label for="post-title">Title</label>
+              <label for="post-title" data-i18n="lbl_post_title">Title</label>
               <input type="text" id="post-title" required placeholder="e.g. Flood Relief Phase 2 Mobilization">
             </div>
 
             <div class="form-group">
-              <label for="post-category">Category</label>
+              <label for="post-category" data-i18n="lbl_category">Category</label>
               <select id="post-category" required>
                 <option value="ANNOUNCEMENT">Announcement</option>
                 <option value="NEWS">News</option>
@@ -610,36 +587,35 @@
             </div>
 
             <div class="form-group">
-              <label for="post-summary">Summary (Short Preview)</label>
+              <label for="post-summary" data-i18n="lbl_summary">Summary (Short Preview)</label>
               <input type="text" id="post-summary" placeholder="Brief 1-2 sentence lead...">
             </div>
 
             <div class="form-group">
-              <label for="post-body">Body / Full Details</label>
+              <label for="post-body" data-i18n="lbl_body">Body / Full Details</label>
               <textarea id="post-body" rows="4" required placeholder="Detailed message content..."></textarea>
             </div>
 
-            <button type="submit" class="btn btn-primary">Save as Draft</button>
+            <button type="submit" class="btn btn-primary" data-i18n="btn_save_draft">Save as Draft</button>
           </form>
         </div>
 
         <div class="card">
           <div class="card-head">
-            <h3>All Articles &amp; Bulletins</h3>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="loadEditorContentList()">Refresh</button>
+            <h3 data-i18n="all_bulletins_title">All Articles &amp; Bulletins</h3>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="loadEditorContentList()" data-i18n="btn_refresh">Refresh</button>
           </div>
           <div class="table-responsive mt-4">
             <table class="data-table" id="editor-content-table">
               <thead>
                 <tr>
-                  <th>Title</th>
-                  <th>Category</th>
-                  <th>Status</th>
-                  <th>Actions</th>
+                  <th data-i18n="lbl_post_title">Title</th>
+                  <th data-i18n="lbl_category">Category</th>
+                  <th data-i18n="th_status">Status</th>
+                  <th data-i18n="th_actions">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                <tr class="skeleton-row" aria-hidden="true"><td colspan="4"><span class="skeleton skeleton-line"></span></td></tr>
                 <tr class="skeleton-row" aria-hidden="true"><td colspan="4"><span class="skeleton skeleton-line"></span></td></tr>
                 <tr class="skeleton-row" aria-hidden="true"><td colspan="4"><span class="skeleton skeleton-line"></span></td></tr>
               </tbody>
@@ -651,23 +627,12 @@
   </main>
 
   <footer class="footer">
-    <div class="footer-brand"><img src="/image_3.jpg" alt="ShipLens Logo" class="brand-logo" onerror="if(!this.dataset.fb){this.dataset.fb=1;this.src='/logo.png'}else{this.hidden=true}"><span>ShipLens</span></div>
-    <p>© 2026 ShipLens Enterprise Platform — Server-side RBAC &amp; Financial Auditing</p>
-  </footer>
-
-  <!-- In-app error pages -->
-  <div id="error-view" class="error-overlay hidden" role="alertdialog" aria-modal="true" aria-labelledby="error-title" aria-describedby="error-desc">
-    <div class="error-card" id="error-card" data-kind="404">
-      <div class="error-icon" id="error-icon" aria-hidden="true"></div>
-      <div class="error-code" id="error-code">404</div>
-      <h2 class="error-title" id="error-title"></h2>
-      <p class="error-desc" id="error-desc"></p>
-      <div class="error-actions">
-        <button type="button" class="btn btn-primary" id="error-primary"></button>
-        <button type="button" class="btn btn-secondary" id="error-secondary"></button>
-      </div>
+    <div class="footer-brand">
+      <img src="/image_3.jpg" alt="ShipLens Logo" class="brand-logo" onerror="if(!this.dataset.fb){this.dataset.fb=1;this.src='/logo.png'}else{this.hidden=true}">
+      <span>ShipLens</span>
     </div>
-  </div>
+    <p data-i18n="footer_legal">© 2026 ShipLens Enterprise Platform — Server-side RBAC &amp; Financial Auditing</p>
+  </footer>
 
   <div id="toast-root" aria-live="polite"></div>
 
