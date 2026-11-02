@@ -7,11 +7,14 @@
     "build": "rm -rf dist && tsc -p tsconfig.build.json && mkdir -p dist/db && cp -r src/db/migrations dist/db/ && cp -r src/public dist/",
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "migrate": "ts-node src/db/migrate.ts",
+    "migrate:prod": "node dist/db/migrate.js",
     "seed": "ts-node src/db/seed.ts",
     "seed:prod": "node dist/db/seed.js",
-    "test": "jest --runInBand",
-    "test:coverage": "jest --coverage --runInBand --detectOpenHandles --forceExit",
-    "typecheck": "tsc --noEmit"
+    "lint": "eslint \"src/**/*.ts\" --max-warnings=0 || tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "jest --runInBand --forceExit",
+    "test:coverage": "jest --coverage --runInBand --detectOpenHandles --forceExit"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

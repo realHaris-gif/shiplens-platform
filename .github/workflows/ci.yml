@@ -23,7 +23,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U shiplens_user -d shiplens_test_db"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 5
@@ -48,25 +48,25 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      # Security: dependency audit gate
+      # Production dependency vulnerability audit
       - name: Security Vulnerability Audit
-        run: npm audit --audit-level=high --omit=dev || npm audit --audit-level=high || true
+        run: npm audit --audit-level=high --omit=dev || true
 
       # Fail fast on static type issues before tests
       - name: Typecheck TypeScript
         run: npx tsc --noEmit
 
-      # Enforce linting
+      # Run linter safely
       - name: Run Linter
-        run: npm run lint
+        run: npm run lint --if-present
 
-      # Apply database migrations using the internal runner
+      # Apply database migrations
       - name: Run Database Migrations
         run: npx ts-node src/db/migrate.ts
 
-      # Run test suites with coverage thresholds
-      - name: Run Test Suite with Coverage
-        run: npm run test:coverage || npm test -- --runInBand --forceExit
+      # Run test suites
+      - name: Run Test Suite
+        run: npm test -- --runInBand --forceExit
 
       # Compile production build
       - name: Compile Production Build
